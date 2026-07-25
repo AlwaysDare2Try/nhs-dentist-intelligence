@@ -21,6 +21,7 @@ def run(coro):
 
 def client_with(handler, **kwargs) -> PoliteClient:
     """A PoliteClient wired to a mock transport instead of the network."""
+    kwargs.setdefault("backoff_scale", 0)
     return PoliteClient(transport=httpx.MockTransport(handler), **kwargs)
 
 

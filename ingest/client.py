@@ -95,10 +95,13 @@ class PoliteClient:
         max_attempts: int = DEFAULT_MAX_ATTEMPTS,
         headers: dict[str, str] | None = None,
         transport: httpx.AsyncBaseTransport | None = None,
+        backoff_scale: float = 1.0,
     ) -> None:
         self.limiter = RateLimiter(rate_per_sec)
         self.semaphore = asyncio.Semaphore(concurrency)
         self.max_attempts = max_attempts
+        # Tests set this to 0 so retry logic can be verified without sleeping.
+        self.backoff_scale = backoff_scale
         self._headers = {
             "User-Agent": USER_AGENT,
             "Accept-Encoding": "gzip, deflate",
@@ -192,6 +195,9 @@ class PoliteClient:
                 delay = float(header.strip())
         if not delay:
             delay = min(60.0, 2.0**attempt) * (0.5 + random.random())
+        delay *= self.backoff_scale
+        if not delay:
+            return
 
         if response is not None and response.status_code == 429:
             # Being rate-limited is a message to the whole crawl, not one worker.

@@ -74,10 +74,12 @@ class SnapshotWriter:
         root: Path | str = DEFAULT_ROOT,
         day: str | None = None,
         route: str = "unknown",
+        resume: bool = False,
     ) -> None:
         self.root = Path(root)
         self.day = day or utc_today()
         self.route = route
+        self.resume = resume
         self.day_dir = self.root / self.day
         self.blob_dir = self.root / "blobs"
         self._manifest_path = self.day_dir / "manifest.jsonl.gz"
@@ -90,6 +92,8 @@ class SnapshotWriter:
         self.bytes_new = 0
         self.bytes_deduped = 0
         self._errors: list[dict] = []
+        # Practice IDs already captured today, populated on resume.
+        self.already_captured: set[str] = set()
 
     # -- lifecycle ---------------------------------------------------------
 
@@ -97,9 +101,32 @@ class SnapshotWriter:
         guard_day_not_final(self.root, self.day)
         self.day_dir.mkdir(parents=True, exist_ok=True)
         self.blob_dir.mkdir(parents=True, exist_ok=True)
+
+        # A full-estate capture takes hours. If it dies at practice 5,000 we
+        # resume rather than re-fetch — both to save the source's bandwidth and
+        # because a restart-from-zero may not finish before the next run is due.
+        append = self.resume and self._manifest_path.exists()
+        if append:
+            self._load_prior_progress()
         # mtime=0 so an unchanged manifest is byte-identical and does not churn git.
-        self._fh = gzip.GzipFile(self._manifest_path, "wb", mtime=0)
+        # gzip members concatenate cleanly; the reader walks them transparently.
+        self._fh = gzip.GzipFile(self._manifest_path, "ab" if append else "wb", mtime=0)
         return self
+
+    def _load_prior_progress(self) -> None:
+        """Recover counts and captured IDs from a partial run so run.json stays
+        truthful about the day as a whole, not just this process's share."""
+        try:
+            for entry in read_manifest(self.root, self.day):
+                self.already_captured.add(entry["practice_id"])
+                if entry.get("sha256"):
+                    self.written += 1
+                else:
+                    self.failed += 1
+        except (OSError, EOFError, json.JSONDecodeError):
+            # A truncated final member means the process was killed mid-write.
+            # Whatever we recovered is still valid; the rest gets re-fetched.
+            pass
 
     def __exit__(self, exc_type, exc, tb) -> None:
         if self._fh is not None:
