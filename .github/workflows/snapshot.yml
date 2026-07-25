@@ -1,0 +1,71 @@
+name: Nightly snapshot
+
+# Ledger 1.3. Daily, not hourly: the source operates on a 90-day update mandate,
+# so hourly polling is three orders of magnitude of waste and reads as abusive (C6).
+# 03:00 UTC keeps the capture off UK daytime traffic.
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      route:
+        description: "Fetch route override (auto | api | html)"
+        required: false
+        default: "auto"
+
+concurrency:
+  group: snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    # The full estate at ~1 req/sec takes a couple of hours; the 6h default would
+    # kill a slow-but-healthy run and cost a night of history.
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - run: uv python install 3.12
+      - run: uv sync
+
+      - name: Capture full estate
+        env:
+          NHS_API_KEY: ${{ secrets.NHS_API_KEY }}
+          FETCH_ROUTE: ${{ inputs.route || 'auto' }}
+        run: uv run python ingest/fetch.py --route "$FETCH_ROUTE"
+
+      # Ledger 1.4 — a run that "succeeds" while returning 400 practices instead
+      # of 9,000 is worse than one that crashes, because nothing alerts. A failure
+      # here fails the job, which sends the workflow-failure email.
+      - name: Assert capture is healthy
+        run: uv run python ingest/health.py
+
+      - name: Commit snapshot
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/snapshots
+          if git diff --staged --quiet; then
+            echo "No snapshot changes to commit."
+          else
+            git commit -m "Snapshot $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      # Committing runs even on an unhealthy capture — partial history beats none,
+      # and the failed job is what raises the alarm.
+      - name: Re-raise capture failure
+        if: failure()
+        run: |
+          echo "::error::Nightly capture failed or failed its health checks. \
+          History for $(date -u +%Y-%m-%d) may be incomplete and cannot be re-fetched."
+          exit 1
