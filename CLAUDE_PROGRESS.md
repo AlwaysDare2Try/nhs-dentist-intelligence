@@ -45,6 +45,7 @@ The ledger specifies *"gzipped JSON per practice in dated directories"* for step
 | 1.2 | **Append-only snapshot store** | `ingest/snapshot.py` — content-addressed blobs + nightly manifest + run metadata. Completed days refuse overwrite; aborted days can be retried |
 | 1.4 | **Failure alarm logic** | `ingest/health.py` — ±10% volume drift vs prior run, 5,000-record floor, 5% failure-rate ceiling. Non-zero exit fails the workflow, which sends the email |
 | 1.3 | **Nightly workflow** | `.github/workflows/snapshot.yml` — 03:00 UTC cron, 5.5h timeout, auto-commit of captures. Cannot *run* until the repo has a remote (P2) |
+| 1.1 | **Polite HTTP client** | `ingest/client.py` — global 1 req/sec token bucket shared across workers, honest User-Agent with contact URL, `Retry-After` honoured, exponential backoff with jitter, 429 backs off the whole crawl. Route-agnostic so ADR-002 can change the route without touching it |
 | — | README + Apache-2.0 licence | Carries the C2 "not affiliated with the NHS" statement and the OGL/ODbL attribution table |
 
 ---
@@ -100,11 +101,13 @@ Ordered by the sequence actually being worked, not by ledger number. §8 items a
 
 **Loop 1a** — `ingest/snapshot.py`, `ingest/health.py`, `tests/test_snapshot.py`, `.github/workflows/snapshot.yml`. Commit `e2c7a07`.
 
+**Loop 1b** — `ingest/client.py`, `tests/test_client.py`. Commit `01a329e`.
+
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| `uv run pytest -q` | **16 passed** — roundtrip fidelity, cross-night dedup, overwrite refusal, abort-and-retry, failure recording, all four health alarms |
+| `uv run pytest -q` | **27 passed** — roundtrip fidelity, cross-night dedup, overwrite refusal, abort-and-retry, failure recording, all four health alarms, plus rate-limit enforcement, retry/no-retry semantics and User-Agent honesty |
 | `uv run ruff check .` | Clean |
 | `uv sync --all-extras` | Clean |
 | Network — `nhs.uk/service-search/find-a-dentist` | 200 OK |
