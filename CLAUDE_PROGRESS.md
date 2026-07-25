@@ -18,13 +18,24 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loop 7 — in flight.** Loops 0–6 complete.
+**Loops 0–7 complete. Session halted by a spend limit — see below.**
 
-### What is being worked on now
+### ⚠️ Account hit its monthly spend limit
 
-**A full-estate capture is running in the background** — the first night of history. 6,407 practices at ~0.96 req/s, **zero failures**, roughly 1,100 done as of last check.
+The sub-agent building step 4.1 was terminated mid-run by the limit. Raise it at `claude.ai/settings/usage` to continue. Nothing is lost: all completed work is committed, and `data/snapshots/` holds night one intact.
 
-**A sub-agent is building step 4.1** — the NHSBSA activity history ingest, the plan's "escape hatch" giving ~10 years of delivered-activity truth on day one. It has also been asked to measure the BSA↔ODS join key situation, which is the key input to 3.3.
+### Night one is captured, parsed and committed
+
+**6,407 practices, zero failures, 43.1 MB.** All four health checks passed. The parser recognised **100%** of pages.
+
+| Reported state | Practices | Share |
+|---|---:|---:|
+| Accepting (any cohort) | 2,545 | 39.7% |
+| Not accepting | 1,997 | 31.2% |
+| Not confirmed | 1,281 | 20.0% |
+| Referral-only | 584 | 9.1% |
+
+**By cohort — the number that matters for product framing:** adults 18+ accepted at only **27.8%** of practices, free-care adults 29.0%, children 39.5%. A headline "39.7% accepting" would mislead. This confirms decision D2 with our own data: leading with an "accepting" filter still returns mostly nothing.
 
 Progress is checkable at any time:
 
@@ -63,7 +74,7 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 - **Q1 answered YES.** nhs.uk carries acceptance status *and* a "Last confirmed" date, at the same cohort granularity the v3 API offers. Scraping loses nothing material, so the build did not wait on an API key.
 - **The estate is 6,407 published profiles**, not ~9,000. The 9,779 figure is ODS *active dental practices*, which includes private-only practices and prison dental units with no public profile.
 - **Q2, first leg answered.** 6,358 / 6,407 nhs.uk practices (99.2%) resolve to an active ODS record via the zero-padding convention alone. The NHSBSA contract leg remains for 3.3.
-- **Freshness is visible on day one.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06** — some practices have not confirmed their status in fifteen years. One request yields a freshness distribution for the whole estate, before any history of our own accrues. This materially strengthens step 4.3.
+- **⚠️ CORRECTED — nhs.uk resets status after 90 days.** An earlier note here claimed some practices "have not confirmed their status in fifteen years". That was wrong: `lastmod` is *page* modification, not confirmation. Night one proved it — every practice with a declared status was confirmed within **89 days**, and no practice with a pre-2026 `lastmod` has any declared status at all (all 447 read `not_confirmed` or `referral_only`). **`days_since_confirmed` is therefore capped at 90 by construction** and is weak as a differentiator. The decade of silence lives in the `lastmod` of the undeclared 29.1% — 51 practices untouched since 2011, all reading "not confirmed". **Step 4.3 must derive freshness for undeclared practices from `lastmod`, not from a confirmation date that does not exist.**
 - **80.6% of English LSOAs contain no dental practice at all** — 27,193 of 33,755. This settles a design question for 4.2: the dental-desert model must be **catchment-based** (distance to nearest N practices), because "practices in my LSOA" would report four-fifths of England as a total desert.
 - **Population reconciles exactly.** England mid-2024 = 58,620,101, matching the published ONS figure; children + adults sums to total; 100% of practice-bearing LSOAs have a population figure.
 - **Compliance is clean.** robots.txt permits these paths, terms carry no anti-scraping clause, content is OGL. Our honest bot User-Agent is accepted — no browser spoofing is used. Required attribution wording is pinned in ADR-002 for the 6.1 pass.
@@ -76,8 +87,8 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 
 | Ledger | Item | State |
 |---|---|---|
-| 1.1 | First full capture | **Running now** |
-| 4.1 | Ingest NHSBSA activity history | **Sub-agent in flight** |
+| 4.1 | Ingest NHSBSA activity history | **PARKED — spend limit.** Draft at `ingest/bsa.py.wip` (see P5) |
+| 4.3 | Rework freshness to use sitemap `lastmod` for undeclared practices | **New — follows from the correction above** |
 | 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days.** Waiting on 4.1's join-key findings |
 | 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3.** Must be catchment-based, per the 80.6% finding |
 | 4.3 | Freshness / trust scoring | ✅ Module + tests done; needs the capture to run against real data |
@@ -95,6 +106,8 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | **P2** | **GitHub remote** | No `gh` CLI, no authenticated account. CI cannot run and the nightly cron cannot fire | **The real blocker.** Create an empty GitHub repo and give me the URL with push access, or install + auth `gh`. Until then history accrues only when this machine runs it manually |
 | P1 | NHS Service Search API v3 key | Human must apply on the NHS Digital developer portal; production needs a signed Online Connection Agreement | Not on the critical path — ADR-002 chose a route that does not need it. Worth starting for the timestamp precision it would later add |
 | P3 | Q3 — your viability conditions | Plan assumes solo builder, near-zero budget, public release, no NHS partnership | Confirm or correct. Proceeding on the assumed conditions |
+| **P5** | **Monthly spend limit reached** | Terminated the 4.1 sub-agent mid-run | Raise it at `claude.ai/settings/usage`. All completed work is committed; nothing is lost |
+| P6 | 4.1 draft is incomplete | `ingest/bsa.py.wip` — 753 lines referencing two names it never defines; never ran, no tests | Parked outside the lint/import path so it cannot be mistaken for working code. It **did** identify the right dataset: `english-contractor-monthly-general-dental-activity`, contract-level monthly back to April 2016. Treat the research as a lead, not as verified |
 | P4 | Node.js not installed | Needed for §5 web app | Not urgent — will install when §5 starts |
 
 ---
@@ -137,16 +150,20 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 
 ## Next planned action
 
-1. **When the capture finishes** (highest priority), run:
-   ```bash
-   export PATH="$HOME/.local/bin:$PATH"
-   uv run python ingest/health.py     # assert the night is sane
-   uv run python ingest/parse.py      # first practice-day table
-   ```
-   Then record the real acceptance distribution across England, commit the snapshot, and note the recognised-share figure.
-2. **Step 3.3 — entity resolution**, once 4.1 reports what join key the BSA data carries. Timebox to two days; ship at whatever match rate is reached and publish the number (C8).
-3. **Step 4.2 — dental-desert model** (gate DG3). Catchment-based, not LSOA-contains-practice.
-4. **Step 4.3 — freshness scoring**, exploiting the sitemap `lastmod` distribution that already reaches back to 2011.
+**First, tonight's capture.** If the UTC date has rolled over and `data/snapshots/` has no folder for today, this outranks everything:
+
+```bash
+export PATH="$HOME/.local/bin:$PATH"
+cd "/Users/dare2try/Claude Projects/CLD DentistApp"
+uv run python ingest/fetch.py && uv run python ingest/health.py
+```
+
+Then, in order:
+
+1. **Rework 4.3** to derive freshness for undeclared practices from sitemap `lastmod`, per the correction above. The sitemap is already captured inside every snapshot as `_sitemap`, so no re-fetch is needed.
+2. **Redo 4.1** (NHSBSA activity). Start from the dataset `ingest/bsa.py.wip` identified, but write it fresh with tests — do not trust the draft.
+3. **Step 3.3 — entity resolution**, once 4.1 establishes the BSA join key. Timebox two days; ship at whatever match rate is reached and publish it (C8).
+4. **Step 4.2 — dental-desert model** (gate DG3). Catchment-based, not LSOA-contains-practice.
 
 ---
 

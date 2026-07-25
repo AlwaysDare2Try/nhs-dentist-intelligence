@@ -43,7 +43,17 @@ This is the same principle as *capture raw, parse later*, applied to the build o
 
 **The estate is 6,407 practices, not ~9,000.** The plan's figure was an approximation. 6,407 is the published nhs.uk profile count; 9,779 is ODS *active dental practices*, which includes private-only practices and prison dental units with no public profile. Both numbers are correct and they measure different things — a distinction that would have caused a false alarm later when the crawler "only" returned 6,407.
 
-**Freshness is visible on day one.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06**. Some practices have not confirmed their status in fifteen years. One request yields a freshness distribution for the whole estate — before any history of our own has accrued. Step 4.3 was expected to depend on weeks of accrual; it now has a strong signal immediately.
+**Freshness is visible on day one — but not in the way first assumed.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06**, and this was initially written up as "some practices have not confirmed their status in fifteen years."
+
+**That was wrong, and the first full capture disproved it.** `lastmod` is *page* modification, not status confirmation. The correction matters, because the truth changes the product:
+
+Every practice carrying a declared acceptance status was confirmed within **89 days**. Not one sat between 90 days and fifteen years. Cross-referencing status against `lastmod` year made the mechanism obvious — no practice with a pre-2026 `lastmod` has *any* declared status; all 447 of them read `not_confirmed` or `referral_only`.
+
+**nhs.uk resets a practice's acceptance status to "not confirmed" once the 90-day declaration lapses.** So `days_since_confirmed` is capped at 90 by construction and is nearly worthless as a differentiator — the freshness score cannot range beyond a single quarter.
+
+The real signal is in the other population. 29.1% of the estate has *no* declared status, and their `lastmod` is where the decade of silence actually lives: 51 practices have not touched their profile since 2011, and every one of them reads "not confirmed". Step 4.3's design changes accordingly — freshness for the undeclared majority must come from `lastmod`, not from a confirmation date that does not exist.
+
+*Lesson: the most interesting finding of the session was a correction to an earlier finding of the same session. Recording the first claim confidently is what made it checkable.*
 
 **Q2, first leg: 99.2%.** 6,358 of 6,407 nhs.uk practices resolve to an active ODS record using nothing but the zero-padding convention (`V01699` → `V001699`). The NHSBSA contract leg — the genuinely hard one, because contracts are many-to-many with sites — remains for step 3.3.
 
@@ -103,11 +113,36 @@ A third delegation was considered and **rejected**: building the ODS loader. Tha
 
 ---
 
+## Night one
+
+The capture completed: **6,407 practices, zero failures, 43.1 MB.** All four health checks passed. The parser recognised **100%** of pages.
+
+| Reported state | Practices | Share |
+|---|---:|---:|
+| Accepting (any cohort) | 2,545 | 39.7% |
+| Not accepting | 1,997 | 31.2% |
+| Not confirmed | 1,281 | 20.0% |
+| Referral-only specialist | 584 | 9.1% |
+
+By cohort — the number that actually matters for product framing:
+
+| Cohort | Accepting | Share |
+|---|---:|---:|
+| Adults 18+ | 1,778 | **27.8%** |
+| Adults entitled to free care | 1,856 | 29.0% |
+| Children 17 and under | 2,533 | 39.5% |
+
+This vindicates the repositioning decision (D2) with our own data. A headline "39.7% accepting" is misleading: for the adult searching for a dentist, fewer than three practices in ten are open, and 29.1% of the estate will not say either way. The viability analysis's ~9-in-10-closed figure was drawn from a different denominator and a worse year, but the direction is confirmed — **leading with an "accepting" filter would still return mostly nothing.**
+
+## Blocked mid-session
+
+The NHSBSA activity ingest (4.1) was delegated to a sub-agent that **terminated when the account hit its monthly spend limit**. It had identified the correct dataset — `english-contractor-monthly-general-dental-activity`, contract-level and monthly back to April 2016 — and written 753 lines that reference two names it never defined. The draft is parked at `ingest/bsa.py.wip`, deliberately outside the lint and import path so it cannot be mistaken for working code. Its research is preserved; its claims are not trusted.
+
 ## State at end of session
 
-**78 tests green, lint clean, suite runs in ~6 seconds.** Seven commits.
+**122 tests green, lint clean, suite runs in ~6 seconds.** Sixteen commits.
 
-A full-estate capture of all 6,407 practices is running at ~1 req/s with zero failures — the first night of a record that exists nowhere else.
+Night one of a record that exists nowhere else is captured, parsed and committed.
 
 **The one thing that still needs a human:** the repository has no GitHub remote. Until it does, the nightly cron cannot fire, and unattended accrual — the entire differentiating asset — does not start. Local captures work, but they depend on someone remembering.
 
