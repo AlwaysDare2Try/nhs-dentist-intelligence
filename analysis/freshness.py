@@ -10,16 +10,35 @@ status". Everything it produces is *what was reported, and when it was last
 confirmed*. `describe()` exists so that phrasing is generated in one place
 rather than reinvented by each surface that renders it.
 
-Two independent signals of staleness
-------------------------------------
-1. **Declared** — the practice's own "Last confirmed" date, parsed from the page.
-2. **Observed** — whether *we* have seen the reported status change across our
-   own snapshots.
+The 90-day reset, and why this module has two age signals
+---------------------------------------------------------
+Night one established something that changes the design: **nhs.uk resets a
+practice's acceptance status to "not confirmed" once its declaration lapses.**
+Every practice carrying a declared status had confirmed within 89 days; not one
+sat between 90 days and the fifteen-year range the sitemap spans.
 
-They disagree usefully. A practice can re-confirm the same answer every month
-(fresh but never-changing), or never re-confirm while its page churns. Volatility
-is only meaningful once several nights have accrued; with one night it is
-correctly zero, not unknown.
+So ``days_since_confirmed`` is **capped at 90 by construction** and is nearly
+worthless on its own — it cannot distinguish a practice that lapsed last week
+from one silent since 2011. Both simply read "not confirmed".
+
+The age of the silent majority lives elsewhere: in the sitemap's ``<lastmod>``
+for that profile. 51 practices have not had their page touched since 2011, and
+every one reads "not confirmed".
+
+This module therefore carries two age signals and keeps them distinct:
+
+1. **Declared age** — the practice's own "Last confirmed" date. Precise, but
+   bounded to a single quarter, and only exists for ~71% of the estate.
+2. **Silence age** — days since the profile page last changed. Coarser (a page
+   can change for reasons unrelated to acceptance), but unbounded, and it is the
+   *only* signal available for the ~29% that have never declared.
+
+``effective_days`` picks the right one per practice and records which in
+``age_evidence``, so no downstream surface has to guess.
+
+A third, independent signal is **observed** volatility: whether *we* have seen
+the reported status change across our own snapshots. It needs several nights to
+mean anything; with one night it is correctly zero, not unknown.
 """
 
 from __future__ import annotations
@@ -47,14 +66,23 @@ _BUCKETS: list[tuple[int, str]] = [
     (730, VERY_STALE),
 ]
 
+# Deliberately neutral wording. A practice can land in FRESH on either signal,
+# and only the confirmation signal means the mandate was actually met — so the
+# bucket must not claim confirmation. Mandate compliance is reported separately
+# and exactly, from `meets_mandate`.
 _BUCKET_LABELS = {
-    FRESH: "confirmed within the 90-day mandate",
-    OVERDUE: "past the 90-day mandate",
-    STALE: "not confirmed for over 6 months",
-    VERY_STALE: "not confirmed for over a year",
-    ANCIENT: "not confirmed for over 2 years",
-    NEVER_CONFIRMED: "never confirmed",
+    FRESH: "sign of activity within the last 3 months",
+    OVERDUE: "no sign of activity for over 3 months",
+    STALE: "no sign of activity for over 6 months",
+    VERY_STALE: "no sign of activity for over a year",
+    ANCIENT: "no sign of activity for over 2 years",
+    NEVER_CONFIRMED: "never confirmed, and age unknown",
 }
+
+# Which signal produced effective_days.
+EVIDENCE_CONFIRMED = "confirmed_date"
+EVIDENCE_LASTMOD = "page_lastmod"
+EVIDENCE_NONE = "none"
 
 
 def bucket_for(days: int | None) -> str:
@@ -79,6 +107,11 @@ class Freshness:
     bucket: str
     meets_mandate: bool
     never_confirmed: bool
+    # Silence signal, for practices nhs.uk has reset to "not confirmed".
+    page_lastmod: date | None = None
+    days_since_page_change: int | None = None
+    effective_days: int | None = None
+    age_evidence: str = EVIDENCE_NONE
     # Observed from our own snapshots; requires history to become meaningful.
     observations: int = 1
     status_changes: int = 0
@@ -97,7 +130,13 @@ class Freshness:
     def describe(self) -> str:
         """C1-compliant rendering. Never asserts a current fact."""
         if self.last_confirmed is None:
-            return f"Reported {self.status.replace('_', ' ')}; never confirmed by the practice"
+            base = f"Reported {self.status.replace('_', ' ')}; never confirmed by the practice"
+            if self.page_lastmod is not None:
+                return (
+                    f"{base}. Profile last changed {self.page_lastmod:%-d %B %Y} "
+                    f"({self.days_since_page_change} days before {self.as_of:%-d %B %Y})"
+                )
+            return base
         return (
             f"Reported {self.status.replace('_', ' ')} "
             f"on {self.last_confirmed:%-d %B %Y} "
@@ -105,18 +144,39 @@ class Freshness:
         )
 
     def label(self) -> str:
-        return _BUCKET_LABELS[self.bucket]
+        """Bucket wording, qualified by which signal produced it.
+
+        Only the practice's own confirmation date evidences the 90-day mandate;
+        a recently-changed page does not, and must not be described as though
+        it did.
+        """
+        base = _BUCKET_LABELS[self.bucket]
+        if self.age_evidence == EVIDENCE_CONFIRMED and self.bucket == FRESH:
+            return "confirmed within the 90-day mandate"
+        if self.age_evidence == EVIDENCE_LASTMOD:
+            return f"{base} (profile change only — never confirmed)"
+        return base
+
+
+def _days_between(as_of: date, then: date | None) -> int | None:
+    """Age in days, clamped at zero — a future date is a source error, not a
+    negative age."""
+    if then is None:
+        return None
+    return max(0, (as_of - then).days)
 
 
 def score_practice(
     practice_id: str,
     observations: list[tuple[date, str, date | None]],
+    page_lastmod: date | None = None,
 ) -> Freshness:
     """Score one practice from its observation history.
 
     ``observations`` is ``(snapshot_date, status, last_confirmed)`` per night,
     in any order. The most recent night defines the reported state; the whole
-    series defines volatility.
+    series defines volatility. ``page_lastmod`` supplies the silence signal for
+    practices nhs.uk has reset to "not confirmed".
     """
     if not observations:
         raise ValueError(f"no observations for {practice_id}")
@@ -124,10 +184,17 @@ def score_practice(
     ordered = sorted(observations, key=lambda o: o[0])
     as_of, status, last_confirmed = ordered[-1]
 
-    days = (as_of - last_confirmed).days if last_confirmed else None
-    # A confirmation date in the future is a source error, not negative age.
-    if days is not None and days < 0:
-        days = 0
+    days = _days_between(as_of, last_confirmed)
+    lastmod_days = _days_between(as_of, page_lastmod)
+
+    # Prefer the practice's own declaration; fall back to page silence. Without
+    # either, age is genuinely unknown and must not be implied.
+    if days is not None:
+        effective, evidence = days, EVIDENCE_CONFIRMED
+    elif lastmod_days is not None:
+        effective, evidence = lastmod_days, EVIDENCE_LASTMOD
+    else:
+        effective, evidence = None, EVIDENCE_NONE
 
     changes = 0
     last_changed: date | None = None
@@ -142,9 +209,15 @@ def score_practice(
         status=status,
         last_confirmed=last_confirmed,
         days_since_confirmed=days,
-        bucket=bucket_for(days),
+        # Bucketed on the effective signal, so a practice silent since 2011
+        # lands in ANCIENT rather than collapsing into NEVER_CONFIRMED.
+        bucket=bucket_for(effective) if effective is not None else NEVER_CONFIRMED,
         meets_mandate=days is not None and days <= UPDATE_MANDATE_DAYS,
         never_confirmed=last_confirmed is None,
+        page_lastmod=page_lastmod,
+        days_since_page_change=lastmod_days,
+        effective_days=effective,
+        age_evidence=evidence,
         observations=len(ordered),
         status_changes=changes,
         first_seen=ordered[0][0],
@@ -155,13 +228,24 @@ def score_practice(
 def score_all(rows: list) -> list[Freshness]:
     """Score every practice from a practice-day table (``parse.PracticeDay``)."""
     grouped: dict[str, list[tuple[date, str, date | None]]] = defaultdict(list)
+    lastmods: dict[str, date | None] = {}
     for row in rows:
         snapshot = row.snapshot_date
         if isinstance(snapshot, str):
             snapshot = date.fromisoformat(snapshot)
         grouped[row.practice_id].append((snapshot, row.status, row.last_confirmed))
 
-    return [score_practice(pid, obs) for pid, obs in sorted(grouped.items())]
+        raw = getattr(row, "page_lastmod", "") or ""
+        if raw and lastmods.get(row.practice_id) is None:
+            try:
+                lastmods[row.practice_id] = date.fromisoformat(raw[:10])
+            except ValueError:
+                lastmods[row.practice_id] = None
+
+    return [
+        score_practice(pid, obs, lastmods.get(pid))
+        for pid, obs in sorted(grouped.items())
+    ]
 
 
 def summarise(scores: list[Freshness]) -> dict:
@@ -174,14 +258,18 @@ def summarise(scores: list[Freshness]) -> dict:
     for s in scores:
         buckets[s.bucket] += 1
 
-    dated = [s for s in scores if s.days_since_confirmed is not None]
-    ages = sorted(s.days_since_confirmed for s in dated)
+    ages = sorted(s.effective_days for s in scores if s.effective_days is not None)
     meeting = sum(1 for s in scores if s.meets_mandate)
+    evidence: dict[str, int] = defaultdict(int)
+    for s in scores:
+        evidence[s.age_evidence] += 1
 
     return {
         "total": total,
         "buckets": dict(buckets),
-        "never_confirmed": buckets[NEVER_CONFIRMED],
+        "never_confirmed": sum(1 for s in scores if s.never_confirmed),
+        "age_unknown": buckets[NEVER_CONFIRMED],
+        "evidence": dict(evidence),
         "meets_mandate": meeting,
         "mandate_compliance_rate": meeting / total,
         "median_days_since_confirmed": ages[len(ages) // 2] if ages else None,
@@ -203,9 +291,23 @@ def format_summary(stats: dict) -> str:
             f"  meeting the {UPDATE_MANDATE_DAYS}-day mandate: "
             f"{stats['meets_mandate']:,} ({stats['mandate_compliance_rate']:.1%})"
         ),
-        f"  never confirmed: {stats['never_confirmed']:,}",
-        f"  median days since confirmed: {stats['median_days_since_confirmed']}",
+        f"  never confirmed (status reset by nhs.uk): {stats['never_confirmed']:,}",
+        f"  median age (best available signal): {stats['median_days_since_confirmed']} days",
         f"  oldest: {stats['oldest_days_since_confirmed']} days",
+        "",
+        "  age evidence:",
+        (
+            f"    from the practice's own confirmation date: "
+            f"{stats['evidence'].get(EVIDENCE_CONFIRMED, 0):,}"
+        ),
+        (
+            f"    from profile last-changed date (silence):  "
+            f"{stats['evidence'].get(EVIDENCE_LASTMOD, 0):,}"
+        ),
+        (
+            f"    no age signal at all:                      "
+            f"{stats['evidence'].get(EVIDENCE_NONE, 0):,}"
+        ),
         "",
         "  freshness distribution:",
     ]

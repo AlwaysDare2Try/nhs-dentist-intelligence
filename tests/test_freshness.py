@@ -11,6 +11,9 @@ from datetime import date
 import pytest
 from freshness import (
     ANCIENT,
+    EVIDENCE_CONFIRMED,
+    EVIDENCE_LASTMOD,
+    EVIDENCE_NONE,
     FRESH,
     NEVER_CONFIRMED,
     OVERDUE,
@@ -148,11 +151,12 @@ def test_describe_handles_never_confirmed():
 class Row:
     """Stands in for parse.PracticeDay."""
 
-    def __init__(self, practice_id, snapshot_date, status, last_confirmed):
+    def __init__(self, practice_id, snapshot_date, status, last_confirmed, page_lastmod=""):
         self.practice_id = practice_id
         self.snapshot_date = snapshot_date
         self.status = status
         self.last_confirmed = last_confirmed
+        self.page_lastmod = page_lastmod
 
 
 def test_score_all_groups_by_practice_and_accepts_iso_strings():
@@ -184,6 +188,103 @@ def test_summarise_reports_mandate_compliance():
     assert stats["never_confirmed"] == 1
     assert stats["buckets"][ANCIENT] == 1
     assert stats["oldest_days_since_confirmed"] > 5_000
+
+
+# -- the 90-day reset: silence age for undeclared practices ----------------
+
+
+def test_undeclared_practice_uses_page_lastmod_for_age():
+    """nhs.uk resets status after 90 days, so an undeclared practice has no
+    confirmation date. Its real age lives in the sitemap lastmod."""
+    f = score_practice("V1", [(AS_OF, "not_confirmed", None)], date(2011, 1, 6))
+
+    assert f.never_confirmed
+    assert f.days_since_confirmed is None
+    assert f.age_evidence == EVIDENCE_LASTMOD
+    assert f.days_since_page_change > 5_000
+    assert f.effective_days == f.days_since_page_change
+    assert f.bucket == ANCIENT, "a practice silent since 2011 must not read as merely unconfirmed"
+
+
+def test_declared_practice_prefers_its_own_confirmation_date():
+    """The practice's own declaration beats page churn, which can move for
+    reasons unrelated to acceptance."""
+    f = score_practice("V1", [(AS_OF, "accepting", date(2026, 7, 1))], date(2020, 1, 1))
+    assert f.age_evidence == EVIDENCE_CONFIRMED
+    assert f.effective_days == 24
+    assert f.bucket == FRESH
+
+
+def test_no_signal_at_all_is_age_unknown():
+    """Absence of both signals must not be implied as fresh or as ancient."""
+    f = score_practice("V1", [(AS_OF, "not_confirmed", None)])
+    assert f.age_evidence == EVIDENCE_NONE
+    assert f.effective_days is None
+    assert f.bucket == NEVER_CONFIRMED
+
+
+def test_future_lastmod_is_clamped():
+    f = score_practice("V1", [(AS_OF, "not_confirmed", None)], date(2026, 12, 1))
+    assert f.days_since_page_change == 0
+
+
+def test_describe_reports_silence_for_undeclared():
+    f = score_practice("V1", [(AS_OF, "not_confirmed", None)], date(2011, 1, 6))
+    text = f.describe()
+    assert "never confirmed" in text
+    assert "6 January 2011" in text
+    assert "currently" not in text.lower()
+
+
+def test_score_all_reads_lastmod_from_rows():
+    rows = [
+        Row("V1", "2026-07-25", "not_confirmed", None, "2011-01-06"),
+        Row("V2", "2026-07-25", "accepting", date(2026, 7, 1), "2026-07-24"),
+    ]
+    scores = {s.practice_id: s for s in score_all(rows)}
+    assert scores["V1"].bucket == ANCIENT
+    assert scores["V1"].age_evidence == EVIDENCE_LASTMOD
+    assert scores["V2"].age_evidence == EVIDENCE_CONFIRMED
+
+
+def test_score_all_tolerates_unparseable_lastmod():
+    rows = [Row("V1", "2026-07-25", "not_confirmed", None, "not-a-date")]
+    score = score_all(rows)[0]
+    assert score.age_evidence == EVIDENCE_NONE
+    assert score.bucket == NEVER_CONFIRMED
+
+
+def test_summarise_separates_never_confirmed_from_age_unknown():
+    """The whole point of the rework: most never-confirmed practices DO have a
+    knowable age. Collapsing them into one bucket hides the decade of silence."""
+    scores = [
+        score_practice("V1", [(AS_OF, "not_confirmed", None)], date(2011, 1, 6)),
+        score_practice("V2", [(AS_OF, "not_confirmed", None)]),
+        score_practice("V3", [(AS_OF, "accepting", date(2026, 7, 1))]),
+    ]
+    stats = summarise(scores)
+
+    assert stats["never_confirmed"] == 2, "both lack a confirmation date"
+    assert stats["age_unknown"] == 1, "only one lacks any age signal"
+    assert stats["buckets"][ANCIENT] == 1
+    assert stats["evidence"][EVIDENCE_LASTMOD] == 1
+    assert stats["oldest_days_since_confirmed"] > 5_000
+
+
+def test_fresh_bucket_does_not_claim_confirmation_without_it():
+    """A practice whose page changed recently but which never confirmed lands in
+    FRESH on the silence signal. Labelling that "confirmed within the mandate"
+    would overstate compliance — C8 forbids flattering the numbers."""
+    confirmed = score_practice("V1", [(AS_OF, "accepting", date(2026, 7, 1))])
+    page_only = score_practice("V2", [(AS_OF, "not_confirmed", None)], date(2026, 7, 20))
+
+    assert confirmed.bucket == page_only.bucket == FRESH
+    assert confirmed.meets_mandate
+    assert not page_only.meets_mandate
+
+    assert "confirmed within the 90-day mandate" == confirmed.label()
+    assert "never confirmed" in page_only.label()
+    assert "confirmed within the 90-day mandate" != page_only.label()
 
 
 def test_summarise_handles_empty():

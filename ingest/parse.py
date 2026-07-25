@@ -72,6 +72,10 @@ class PracticeDay:
     statement: str = ""
     source_url: str = ""
     parse_note: str = ""
+    # Sitemap <lastmod> for this profile. For the ~29% of practices that have
+    # never declared a status, this is the only available age signal — see the
+    # note in analysis/freshness.py about the 90-day reset.
+    page_lastmod: str = ""
 
     @property
     def recognised(self) -> bool:
@@ -115,7 +119,15 @@ def parse_last_confirmed(html: str) -> tuple[date | None, str]:
     return None, raw
 
 
-def parse_practice(practice_id: str, snapshot_date: str, html: str, *, page: str = "", url: str = "") -> PracticeDay:
+def parse_practice(
+    practice_id: str,
+    snapshot_date: str,
+    html: str,
+    *,
+    page: str = "",
+    url: str = "",
+    lastmod: str = "",
+) -> PracticeDay:
     """Parse one captured payload into a practice-day row."""
     region = routine_care_region(html)
     region_text = _text(region)
@@ -134,6 +146,7 @@ def parse_practice(practice_id: str, snapshot_date: str, html: str, *, page: str
         last_confirmed_raw=raw,
         statement=statement,
         source_url=url,
+        page_lastmod=lastmod,
     )
 
     lowered = statement.lower()
@@ -214,12 +227,14 @@ def parse_day(root: Path | str, day: str) -> tuple[list[PracticeDay], ParseRepor
         if entry["practice_id"] == "_sitemap":
             continue
         html = body.decode("utf-8", errors="replace")
+        meta = entry.get("meta") or {}
         row = parse_practice(
             entry["practice_id"],
             day,
             html,
-            page=(entry.get("meta") or {}).get("page", ""),
+            page=meta.get("page", ""),
             url=entry.get("url", ""),
+            lastmod=meta.get("lastmod", ""),
         )
         rows.append(row)
         report.total += 1
