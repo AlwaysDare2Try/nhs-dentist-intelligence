@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-25 — end of Loop 4
+**Last updated:** 2026-07-25 — end of Loop 6
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -18,11 +18,13 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loop 5 — pending.** Loops 0–4 complete.
+**Loop 7 — in flight.** Loops 0–6 complete.
 
 ### What is being worked on now
 
-**A full-estate capture is running in the background** — the first night of history. 6,407 practices at ~0.97 req/s, zero failures so far, ETA roughly 100 minutes from 18:30 local.
+**A full-estate capture is running in the background** — the first night of history. 6,407 practices at ~0.96 req/s, **zero failures**, roughly 1,100 done as of last check.
+
+**A sub-agent is building step 4.1** — the NHSBSA activity history ingest, the plan's "escape hatch" giving ~10 years of delivered-activity truth on day one. It has also been asked to measure the BSA↔ODS join key situation, which is the key input to 3.3.
 
 Progress is checkable at any time:
 
@@ -49,8 +51,11 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 2.2 | **ADR-002** — route decision | `docs/ADR-002-…md` | Scrape nhs.uk; defer the API |
 | 2.3 | Snapshot parser | `ingest/parse.py` | All five acceptance states; markup-change alarm |
 | 3.1 | ODS register loader | `ingest/ods.py` | 9,779 active practices; **99.2%** map to nhs.uk |
+| 3.2 | Geocoding + geography | `ingest/geo.py` | **99.8%** matched; England filter, LSOA, ICB, IMD |
+| 3.4 | LSOA population denominator | `ingest/pop.py` | 33,755 LSOAs; 58,620,101 people; clean 0–17 / 18+ |
+| 7.1 | Session 02 journal | `Documenting the Journey/Session-02_…md` | Loops, deviations, dead ends |
 
-**65 tests green, lint clean.** Suite runs in ~6s.
+**96 tests green, lint clean.** Suite runs in ~6s.
 
 ### Key findings so far
 
@@ -58,6 +63,8 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 - **The estate is 6,407 published profiles**, not ~9,000. The 9,779 figure is ODS *active dental practices*, which includes private-only practices and prison dental units with no public profile.
 - **Q2, first leg answered.** 6,358 / 6,407 nhs.uk practices (99.2%) resolve to an active ODS record via the zero-padding convention alone. The NHSBSA contract leg remains for 3.3.
 - **Freshness is visible on day one.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06** — some practices have not confirmed their status in fifteen years. One request yields a freshness distribution for the whole estate, before any history of our own accrues. This materially strengthens step 4.3.
+- **80.6% of English LSOAs contain no dental practice at all** — 27,193 of 33,755. This settles a design question for 4.2: the dental-desert model must be **catchment-based** (distance to nearest N practices), because "practices in my LSOA" would report four-fifths of England as a total desert.
+- **Population reconciles exactly.** England mid-2024 = 58,620,101, matching the published ONS figure; children + adults sums to total; 100% of practice-bearing LSOAs have a population figure.
 - **Compliance is clean.** robots.txt permits these paths, terms carry no anti-scraping clause, content is OGL. Our honest bot User-Agent is accepted — no browser spoofing is used. Required attribution wording is pinned in ADR-002 for the 6.1 pass.
 
 ---
@@ -69,11 +76,9 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | Ledger | Item | State |
 |---|---|---|
 | 1.1 | First full capture | **Running now** |
-| 3.2 | Geocode via ONSPD → lat/long, LSOA, ICB, region + **England filter** | Next |
-| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days** |
-| 3.4 | LSOA population join (demand denominator) | After 3.2 |
-| 4.1 | Ingest NHSBSA activity history 2016→ | After 3.3 |
-| 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3** |
+| 4.1 | Ingest NHSBSA activity history | **Sub-agent in flight** |
+| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days.** Waiting on 4.1's join-key findings |
+| 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3.** Must be catchment-based, per the 80.6% finding |
 | 4.3 | Freshness / trust scoring | Strengthened by the sitemap `lastmod` finding |
 | 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | Weeks 4–5; needs Node (P4) |
 | 6.1–6.3 | Compliance pass, deploy, tell three people | **Gates DG5 / DG4** |
@@ -103,15 +108,20 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 2 | `95e7b0a` | `ingest/fetch.py`, `docs/ADR-002-availability-route.md`, tests |
 | 3 | `0dd702d` | `ingest/parse.py`, tests |
 | 4 | `da148db` | `ingest/ods.py`, `data/reference/ods/`, tests |
+| 5 | `6877cd5` | `ingest/geo.py`, `client.py` POST support, `data/reference/geo/`, tests |
+| — | `ee7f901` | `Documenting the Journey/Session-02_…md` |
+| 6 | `205bfe7` | `ingest/pop.py`, `data/reference/population/`, tests |
 
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| `uv run pytest -q` | **65 passed**, ~6s |
+| `uv run pytest -q` | **96 passed**, ~6s |
 | `uv run ruff check .` | Clean |
 | Live smoke capture (8 practices) | Passed — status + date present in payloads |
 | Live ODS register pull | 9,779 practices in 10 requests |
+| Live geocode of all register postcodes | 99.8% matched |
+| Population totals independently re-verified | 58,620,101 = published ONS figure; children + adults reconciles |
 | Byte-stability of appointments pages across fetches | Identical — content-addressed dedup is effective |
 | CI green on GitHub | **Not yet — blocked on P2** |
 
@@ -126,10 +136,16 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 
 ## Next planned action
 
-1. **When the capture finishes**, run `uv run python ingest/health.py` and `uv run python ingest/parse.py` to produce the first practice-day table, and record the real status distribution across England.
-2. **Step 3.2 — ONSPD geocoding.** Postcode → lat/long, LSOA, ICB, region, and the authoritative England filter that 3.1 deliberately left undone.
-3. **Step 7.1 — write the Session 02 journal entry** to `Documenting the Journey/`. Owed for this session.
-4. Then 3.4 (population) and 3.3 (entity resolution, timeboxed).
+1. **When the capture finishes** (highest priority), run:
+   ```bash
+   export PATH="$HOME/.local/bin:$PATH"
+   uv run python ingest/health.py     # assert the night is sane
+   uv run python ingest/parse.py      # first practice-day table
+   ```
+   Then record the real acceptance distribution across England, commit the snapshot, and note the recognised-share figure.
+2. **Step 3.3 — entity resolution**, once 4.1 reports what join key the BSA data carries. Timebox to two days; ship at whatever match rate is reached and publish the number (C8).
+3. **Step 4.2 — dental-desert model** (gate DG3). Catchment-based, not LSOA-contains-practice.
+4. **Step 4.3 — freshness scoring**, exploiting the sitemap `lastmod` distribution that already reaches back to 2011.
 
 ---
 
