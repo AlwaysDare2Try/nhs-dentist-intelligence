@@ -129,8 +129,14 @@ class PoliteClient:
             self._client = None
 
     async def get(self, url: str, **kwargs) -> Fetched:
-        """Fetch one URL, retrying transient failures. Never raises for a bad
-        response — a failure is data too, and the caller records it."""
+        return await self.request("GET", url, **kwargs)
+
+    async def post(self, url: str, **kwargs) -> Fetched:
+        return await self.request("POST", url, **kwargs)
+
+    async def request(self, method: str, url: str, **kwargs) -> Fetched:
+        """Perform one request, retrying transient failures. Never raises for a
+        bad response — a failure is data too, and the caller records it."""
         if self._client is None:
             raise RuntimeError("PoliteClient used outside its async context manager")
 
@@ -140,7 +146,7 @@ class PoliteClient:
             for attempt in range(1, self.max_attempts + 1):
                 await self.limiter.acquire()
                 try:
-                    response = await self._client.get(url, **kwargs)
+                    response = await self._client.request(method, url, **kwargs)
                     status = response.status_code
 
                     if status == 200:
