@@ -18,14 +18,19 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loop 0 — Foundations** (ledger §0). In progress.
-
-Getting the repo, decision record and toolchain in place so that Loop 1 (the crawler) has somewhere to land and something to schedule it.
+**Loop 1 — Start the clock** (ledger §1). In progress. Loop 0 complete.
 
 ### What is being worked on now
 
-- Repo scaffolding and first commit.
-- A sub-agent is investigating the **fetch route** for step 1.1 — how to enumerate all ~9,000 English dental practices and pull per-practice detail without an API key, and whether that data carries acceptance status and a last-updated date (open question **Q1**). Result pending.
+Everything in §1 *except the fetching itself* is now built and tested — the store, the alarms, the schedule. What remains is `ingest/fetch.py`, which is gated on one unknown.
+
+- A sub-agent is investigating the **fetch route**: how to enumerate all ~9,000 English dental practices and pull per-practice detail without an API key, and whether that data carries acceptance status and a last-updated date (open question **Q1**, gate **DG1**). Result pending — the fetcher is written the moment it lands.
+
+### Design deviation logged this loop
+
+The ledger specifies *"gzipped JSON per practice in dated directories"* for step 1.2. Built instead as a **content-addressed store**: raw payloads in `data/snapshots/blobs/<sha256>.gz`, plus a per-night manifest mapping practice → hash.
+
+**Why:** taken literally the ledger design writes ~9,000 files per night into git — 3.3M files a year, and far worse if the route turns out to be HTML pages rather than JSON records. Content addressing means an unchanged practice costs zero additional bytes, while every night still resolves to a complete, independently parseable view of the estate. The append-only guarantee is unchanged. No ADR raised — this is an implementation choice, not a reversal of an agreed decision.
 
 ---
 
@@ -37,6 +42,10 @@ Getting the repo, decision record and toolchain in place so that Loop 1 (the cra
 | 0.1 | Python toolchain | `uv` installed (was absent); Python 3.12.13 installed; deps synced — httpx, selectolax, tenacity, duckdb, polars, pyarrow, rapidfuzz, pytest, ruff |
 | 0.1 | CI workflow | `.github/workflows/ci.yml` — ruff + pytest on push/PR |
 | 0.2 | **ADR-001** written | `docs/ADR-001-repositioning-and-architecture.md` — locks decisions D1–D10 and constraints C1–C9 |
+| 1.2 | **Append-only snapshot store** | `ingest/snapshot.py` — content-addressed blobs + nightly manifest + run metadata. Completed days refuse overwrite; aborted days can be retried |
+| 1.4 | **Failure alarm logic** | `ingest/health.py` — ±10% volume drift vs prior run, 5,000-record floor, 5% failure-rate ceiling. Non-zero exit fails the workflow, which sends the email |
+| 1.3 | **Nightly workflow** | `.github/workflows/snapshot.yml` — 03:00 UTC cron, 5.5h timeout, auto-commit of captures. Cannot *run* until the repo has a remote (P2) |
+| — | README + Apache-2.0 licence | Carries the C2 "not affiliated with the NHS" statement and the OGL/ODbL attribution table |
 
 ---
 
@@ -47,11 +56,11 @@ Ordered by the sequence actually being worked, not by ledger number. §8 items a
 | Ledger | Item | State |
 |---|---|---|
 | 0.1 | Push to GitHub, confirm CI green | Blocked — see Parked |
-| 1.1 | Crude full-estate capture (~9,000 practices) | **Next — critical path** |
-| 1.2 | Append-only snapshot store `data/snapshots/YYYY-MM-DD/` | Next |
-| 1.3 | Nightly GitHub Actions cron ~03:00 UTC | After 1.2 |
-| 1.4 | Failure alarm — workflow failure + ±10% volume anomaly | After 1.3 |
-| 2.1 | Field-level spike → answers Q1 (**gate DG1**) | Partly folded into the Loop 0 investigation |
+| 1.1 | Crude full-estate capture (~9,000 practices) | **Next — critical path.** Gated on the route investigation |
+| 1.2 | Append-only snapshot store | ✅ Done |
+| 1.3 | Nightly GitHub Actions cron ~03:00 UTC | ✅ Written — blocked on P2 to actually run |
+| 1.4 | Failure alarm | ✅ Done |
+| 2.1 | Field-level spike → answers Q1 (**gate DG1**) | In flight — folded into the route investigation |
 | 2.2 | ADR-002 — choose availability route (API / hybrid / scrape) | After 2.1 |
 | 2.3 | Snapshot → structured parser, one row per practice per date | After 2.2 |
 | 3.1 | Load ODS practice register | Week 2 |
@@ -85,38 +94,38 @@ Ordered by the sequence actually being worked, not by ledger number. §8 items a
 
 ---
 
-## Files changed this loop
+## Files changed
 
-```
-pyproject.toml                                    new
-.gitignore                                        new
-.github/workflows/ci.yml                          new
-docs/ADR-001-repositioning-and-architecture.md    new
-CLAUDE_PROGRESS.md                                new
-ingest/ data/ analysis/ web/                      new (empty scaffolding)
-```
+**Loop 0** — `pyproject.toml`, `.gitignore`, `.github/workflows/ci.yml`, `docs/ADR-001-repositioning-and-architecture.md`, `README.md`, `LICENSE`, `CLAUDE_PROGRESS.md`, directory skeleton. Commit `6409125`.
+
+**Loop 1a** — `ingest/snapshot.py`, `ingest/health.py`, `tests/test_snapshot.py`, `.github/workflows/snapshot.yml`. Commit `e2c7a07`.
 
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| Network reachability — `nhs.uk/service-search/find-a-dentist` | 200 OK |
-| Network reachability — `api.nhs.uk` host | Resolves (404 on bare path, as expected without a key) |
+| `uv run pytest -q` | **16 passed** — roundtrip fidelity, cross-night dedup, overwrite refusal, abort-and-retry, failure recording, all four health alarms |
+| `uv run ruff check .` | Clean |
 | `uv sync --all-extras` | Clean |
-| ruff / pytest | Not yet run — no source code exists yet |
+| Network — `nhs.uk/service-search/find-a-dentist` | 200 OK |
+| Network — `api.nhs.uk` host | Resolves (404 on bare path, as expected without a key) |
+| CI green on GitHub | Not yet — blocked on P2 (no remote) |
 
 ## Issues found
 
 - System Python was 3.9.6; plan requires 3.12. Resolved by installing `uv` + Python 3.12.13.
-- `uv`, `node` and `gh` were all absent from the environment. `uv` resolved; the other two recorded as P2/P4.
+- `uv`, `node` and `gh` were all absent. `uv` resolved; the other two recorded as P4/P2.
+- Ledger 1.2's literal file layout does not scale — see the design deviation above.
 
 ---
 
 ## Next planned action
 
-**Loop 1 — Start the clock** (ledger 1.1 + 1.2). Build `ingest/fetch.py`: enumerate the full English dental estate, fetch each practice's raw payload at ~1 req/sec with retries, and write gzipped raw records to `data/snapshots/YYYY-MM-DD/`. Raw and unparsed — parsing comes later at 2.3, per ADR-001.
+**Loop 1b — build `ingest/fetch.py`** (ledger 1.1) the moment the route investigation reports. Enumerate the full English dental estate, fetch each practice's raw payload at ~1 req/sec with retries and resume-on-interrupt, and hand each one to `SnapshotWriter`. Raw and unparsed — parsing is step 2.3.
 
-Gated on the sub-agent's fetch-route report. **Target: a full-estate capture completed tonight**, because tonight's data cannot be fetched tomorrow.
+Then run a real full-estate capture. **Target: night one of history captured today**, because today's data cannot be fetched tomorrow.
+
+After that: ADR-002 recording the chosen route (2.2), then the parser (2.3).
 
 ---
 
