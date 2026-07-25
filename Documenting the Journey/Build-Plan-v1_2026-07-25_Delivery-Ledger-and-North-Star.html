@@ -1,0 +1,1079 @@
+<title>NHS Dentist Intelligence Platform — Build Plan v1</title>
+<style>
+  :root {
+    --ground: #f6f8f8;
+    --surface: #ffffff;
+    --surface-2: #eef2f2;
+    --band: #e4ebea;
+    --border: #d6e0df;
+    --border-strong: #b9c7c5;
+    --ink: #16211f;
+    --ink-muted: #5c6b69;
+    --ink-faint: #86938f;
+    --accent: #0f4c4a;
+    --accent-soft: #d7e6e4;
+    --amber: #a8641b;
+    --amber-soft: #f6e8d5;
+    --critical: #9b2c2c;
+    --critical-soft: #f7dedd;
+    --shadow: rgba(22, 33, 31, 0.10);
+
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", ui-serif, serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+    --col-seq: 3.4rem;
+    --col-step: 10.5rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #0e1514;
+      --surface: #151e1d;
+      --surface-2: #1b2524;
+      --band: #1f2b2a;
+      --border: #293433;
+      --border-strong: #3d4a48;
+      --ink: #e6edeb;
+      --ink-muted: #98a7a5;
+      --ink-faint: #74817f;
+      --accent: #57b8b2;
+      --accent-soft: #17332f;
+      --amber: #d99a4e;
+      --amber-soft: #35291a;
+      --critical: #e58a85;
+      --critical-soft: #3a1f1e;
+      --shadow: rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #0e1514;
+    --surface: #151e1d;
+    --surface-2: #1b2524;
+    --band: #1f2b2a;
+    --border: #293433;
+    --border-strong: #3d4a48;
+    --ink: #e6edeb;
+    --ink-muted: #98a7a5;
+    --ink-faint: #74817f;
+    --accent: #57b8b2;
+    --accent-soft: #17332f;
+    --amber: #d99a4e;
+    --amber-soft: #35291a;
+    --critical: #e58a85;
+    --critical-soft: #3a1f1e;
+    --shadow: rgba(0, 0, 0, 0.5);
+  }
+
+  :root[data-theme="light"] {
+    --ground: #f6f8f8;
+    --surface: #ffffff;
+    --surface-2: #eef2f2;
+    --band: #e4ebea;
+    --border: #d6e0df;
+    --border-strong: #b9c7c5;
+    --ink: #16211f;
+    --ink-muted: #5c6b69;
+    --ink-faint: #86938f;
+    --accent: #0f4c4a;
+    --accent-soft: #d7e6e4;
+    --amber: #a8641b;
+    --amber-soft: #f6e8d5;
+    --critical: #9b2c2c;
+    --critical-soft: #f7dedd;
+    --shadow: rgba(22, 33, 31, 0.10);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .wrap {
+    max-width: 1680px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2.75rem;
+  }
+
+  /* ---------- masthead ---------- */
+
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    padding-bottom: 1.75rem;
+    border-bottom: 2px solid var(--ink);
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.1rem;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.85rem, 5.2vw, 3rem);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .standfirst {
+    font-family: var(--serif);
+    font-size: clamp(1rem, 2.4vw, 1.2rem);
+    line-height: 1.5;
+    color: var(--ink-muted);
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ---------- generic section ---------- */
+
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+  }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(1.35rem, 3.4vw, 1.85rem);
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .sec-note {
+    color: var(--ink-muted);
+    font-size: 0.92rem;
+    max-width: 68ch;
+    margin: 0;
+  }
+
+  /* ---------- premise cards ---------- */
+
+  .premise {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 1rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1.15rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .card h3 {
+    font-family: var(--sans);
+    font-size: 0.95rem;
+    font-weight: 650;
+    margin: 0;
+    letter-spacing: -0.005em;
+  }
+
+  .card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+  }
+
+  .stack-line {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.85rem 1.1rem;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.7;
+    color: var(--ink-muted);
+    overflow-x: auto;
+  }
+
+  .stack-line strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ---------- table shell ---------- */
+
+  .scroller {
+    overflow-x: auto;
+    overflow-y: visible;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    max-height: 82vh;
+  }
+
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.815rem;
+    line-height: 1.5;
+  }
+
+  #ledger { min-width: 1620px; }
+  #northstar { min-width: 1280px; }
+
+  thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--ink);
+    color: var(--ground);
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: left;
+    vertical-align: bottom;
+    padding: 0.7rem 0.7rem;
+    border-right: 1px solid var(--border-strong);
+    white-space: nowrap;
+  }
+
+  thead th:last-child { border-right: 0; }
+
+  td {
+    padding: 0.7rem 0.7rem;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+
+  td:last-child { border-right: 0; }
+
+  tbody tr:hover td { background: var(--surface-2); }
+
+  /* frozen left columns */
+
+  .c-seq, .c-step { position: sticky; z-index: 2; background: var(--surface); }
+  .c-seq  { left: 0; width: var(--col-seq); min-width: var(--col-seq); }
+  .c-step { left: var(--col-seq); width: var(--col-step); min-width: var(--col-step); }
+  .c-step { border-right: 1px solid var(--border-strong); box-shadow: 4px 0 8px -6px var(--shadow); }
+
+  thead .c-seq, thead .c-step { z-index: 4; background: var(--ink); }
+  tbody tr:hover .c-seq, tbody tr:hover .c-step { background: var(--surface-2); }
+
+  .c-seq {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-faint);
+  }
+
+  .c-step { font-weight: 600; letter-spacing: -0.005em; }
+
+  /* section band rows */
+
+  tr.band td {
+    background: var(--band);
+    border-bottom: 1px solid var(--border-strong);
+    border-top: 1px solid var(--border-strong);
+    padding: 0.6rem 0.75rem;
+  }
+
+  /* the label itself sticks, so phase names stay readable while scrolling right */
+  .band-label {
+    position: sticky;
+    left: 0.75rem;
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.85rem;
+  }
+
+  .band-label b {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .band-label span {
+    font-size: 0.78rem;
+    color: var(--ink-muted);
+    font-style: italic;
+  }
+
+  /* column widths */
+
+  .w-status { width: 6.4rem;  min-width: 6.4rem; }
+  .w-5w     { width: 14.5rem; min-width: 14.5rem; }
+  .w-why    { width: 18rem;   min-width: 18rem; }
+  .w-how    { width: 17rem;   min-width: 17rem; }
+  .w-out    { width: 13rem;   min-width: 13rem; }
+  .w-eff    { width: 5.4rem;  min-width: 5.4rem; }
+  .w-gate   { width: 14.5rem; min-width: 14.5rem; }
+  .w-ns     { width: 15rem;   min-width: 15rem; }
+  .w-ns-sm  { width: 11rem;   min-width: 11rem; }
+
+  .num {
+    font-family: var(--mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.78rem;
+    white-space: nowrap;
+  }
+
+  /* status pills — form differs as well as colour */
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.64rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.45rem;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+
+  .p-next { background: var(--accent); color: var(--ground); }
+  .p-plan { border: 1px solid var(--border-strong); color: var(--ink-muted); }
+  .p-cont { border: 1px dashed var(--accent); color: var(--accent); }
+  .p-defer { background: var(--surface-2); color: var(--ink-faint); border: 1px solid var(--border); }
+
+  /* risk + gate chips */
+
+  .chip {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.63rem;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    font-weight: 600;
+    padding: 0.16rem 0.4rem;
+    margin-bottom: 0.3rem;
+  }
+
+  .k-gate { background: var(--accent-soft); color: var(--accent); }
+  .k-risk { background: var(--amber-soft); color: var(--amber); }
+  .k-high { background: var(--critical-soft); color: var(--critical); }
+  .k-shut { background: var(--surface-2); color: var(--ink-faint); }
+
+  .gate-body { display: block; }
+
+  em.q { font-style: italic; color: var(--ink-muted); }
+
+  .dash { color: var(--ink-faint); }
+
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .hint::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ---------- footnotes / callouts ---------- */
+
+  .callouts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: 1rem;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .stat .k {
+    font-family: var(--mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .stat .v {
+    font-family: var(--serif);
+    font-size: 1.3rem;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+
+  .stat .n {
+    font-size: 0.82rem;
+    color: var(--ink-muted);
+  }
+
+  .imperative {
+    border: 2px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 1.2rem 1.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .imperative h3 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.15rem;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .imperative p { margin: 0; font-size: 0.9rem; color: var(--ink-muted); }
+  .imperative strong { color: var(--ink); }
+
+  .not-goal {
+    font-size: 0.88rem;
+    color: var(--ink-muted);
+    border-left: 3px solid var(--border-strong);
+    padding-left: 0.9rem;
+    margin: 0;
+  }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    font-size: 0.8rem;
+    color: var(--ink-faint);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  a { color: var(--accent); }
+  a:focus-visible, .scroller:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 640px) {
+    :root { --col-step: 8.5rem; }
+    .wrap { padding: 1.75rem 0.75rem 3.5rem; gap: 2rem; }
+    table { font-size: 0.78rem; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">
+      <span>Build Plan v1</span>
+      <span>25 July 2026</span>
+      <span>England only</span>
+      <span>Post-viability</span>
+    </div>
+    <h1>NHS Dentist Intelligence Platform<br /><em>Delivery Ledger</em></h1>
+    <p class="standfirst">Six weeks of evenings to a public v1. Sequenced so the one input that cannot be
+      recovered — elapsed time — starts accruing on day one, and so the gate that could still kill the
+      availability product is answered in week one rather than week nine.</p>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <h2>Two decisions that make this fast</h2>
+      <p class="sec-note">Stated once here so every row in the ledger can stay terse.</p>
+    </div>
+    <div class="premise">
+      <div class="card">
+        <h3>No server database for v1</h3>
+        <p>Roughly 9,000 practices is a few megabytes. Pipelines run offline in Python, DuckDB and GeoPandas
+          and emit static JSON and Parquet; the web app reads those files. Postgres and PostGIS arrive only
+          when something genuinely needs them. This deletes most of the original diagram's infrastructure row.</p>
+      </div>
+      <div class="card">
+        <h3>Capture raw, parse later</h3>
+        <p>The crawler stores unparsed source payloads from the first night. That is why it can start
+          <em>before</em> we know whether the API carries acceptance status: yesterday cannot be re-fetched,
+          but it can always be re-parsed.</p>
+      </div>
+    </div>
+    <p class="stack-line"><strong>Stack</strong> &nbsp;Python 3.12 pipelines · GitHub Actions cron (free, durable
+      scheduling) · append-only snapshots committed to the repo · DuckDB for analysis · Next.js + MapLibre GL on
+      Vercel · Protomaps/OSM tiles</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>North Star</h2>
+      <p class="sec-note">Three tiers, each defined by what is actually true of the platform at that point —
+        not by effort spent. Every tier is a shippable state.</p>
+    </div>
+
+    <p class="hint">Scroll right for all eight columns</p>
+
+    <div class="scroller" tabindex="0">
+      <table id="northstar">
+        <thead>
+          <tr>
+            <th class="c-seq">Tier</th>
+            <th class="c-step">In a phrase</th>
+            <th class="w-ns">Definition</th>
+            <th class="w-ns">Product &amp; UX</th>
+            <th class="w-ns">Data &amp; intelligence</th>
+            <th class="w-ns-sm">Audiences truly served</th>
+            <th class="w-ns">Measurable proof</th>
+            <th class="w-ns-sm">Realistic timeframe</th>
+            <th class="w-ns">Why this tier isn't enough — what unlocks the next</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="c-seq">1</td>
+            <td class="c-step">Good</td>
+            <td>An honest, working directory that adds the one thing nhs.uk withholds: <em>when</em> each claim
+              was made.</td>
+            <td>Postcode search returning ranked nearby practices, each showing “reported X on DATE”; stale
+              listings visibly flagged; usable map on a phone.</td>
+            <td>Nightly snapshots accruing; ODS register geocoded to LSOA and ICB; a freshness score on every
+              practice.</td>
+            <td>General public; patients with specific access needs.</td>
+            <td>Site live; refreshes unattended for 30 nights; any valid English postcode returns sane results;
+              mobile Lighthouse above 90.</td>
+            <td class="num">End of week 6</td>
+            <td>It is a better-labelled directory. An incumbent could copy the freshness label in a fortnight.
+              The moat only appears once history is public and the demand denominator exists.</td>
+          </tr>
+          <tr>
+            <td class="c-seq">2</td>
+            <td class="c-step">Great</td>
+            <td>The longitudinal record and the supply-versus-demand picture are public, queryable and
+              downloadable.</td>
+            <td>Per-practice availability timelines; England-wide dental-desert choropleth; bulk CSV and Parquet
+              downloads with a real data dictionary; a self-published data-quality dashboard.</td>
+            <td>Around ten years of NHSBSA activity joined to LSOA population; entity resolution across nhs.uk,
+              ODS and BSA at a <em>published</em> match rate; volatility and reopening patterns.</td>
+            <td>Adds healthcare analysts, policy makers, researchers and press — four of the six charter
+              audiences.</td>
+            <td>An ICB analyst or journalist answers “how has provision changed here since 2016?” in under two
+              minutes without contacting you; first external citation; repeat non-search traffic to profile and
+              data pages.</td>
+            <td class="num">~3 months<br />(v1 + 4–6 weeks accrual)</td>
+            <td>You are a good dataset that people find. Not yet the thing people <em>check</em>, and the method
+              is not yet reusable by anyone else.</td>
+          </tr>
+          <tr>
+            <td class="c-seq">3</td>
+            <td class="c-step">Exceptional</td>
+            <td>The reference source for NHS dental access in England — and a reusable worked example of how it
+              was built.</td>
+            <td>Open API others build on; embeddable maps and charts; stable versioned data releases that people
+              cite by version.</td>
+            <td>A multi-year continuous availability record existing nowhere else; freshness scoring creating
+              live accountability pressure on the 90-day update rule; method published and independently
+              reproducible.</td>
+            <td>All six charter audiences, plus a secondary audience of builders following the O5 case study.</td>
+            <td>Cited in Parliament, national press or peer-reviewed work; third-party tools consuming the data;
+              NHS or ICB engagement; the documented method demonstrably reused.</td>
+            <td class="num">12+ months of sustained accrual</td>
+            <td><span class="dash">—</span> this is the ceiling. Sustaining it becomes the challenge rather than
+              reaching it.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="not-goal"><strong>Explicitly not the goal at any tier:</strong> beating DentistAlert at consumer
+      alerts.</p>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>The Ledger</h2>
+      <p class="sec-note">Rows are steps, grouped into eight phases. Sequence and Step stay pinned to the left
+        as you scroll right. Status: <span class="pill p-next">next</span>
+        <span class="pill p-plan">planned</span> <span class="pill p-cont">continuous</span>
+        <span class="pill p-defer">deferred</span></p>
+    </div>
+
+    <p class="hint">Scroll right for all nine columns</p>
+
+    <div class="scroller" tabindex="0">
+      <table id="ledger">
+        <thead>
+          <tr>
+            <th class="c-seq">Seq</th>
+            <th class="c-step">Step</th>
+            <th class="w-status">Status</th>
+            <th class="w-5w">What · Who · Where · When</th>
+            <th class="w-why">Why needed &amp; why in this position</th>
+            <th class="w-how">How it will be carried out</th>
+            <th class="w-out">Output → done when</th>
+            <th class="w-eff">Effort</th>
+            <th class="w-gate">Gate / risk</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§0 — Foundations</b><span>Day 0. Deliberately thin — 90 minutes, not a week.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">0.1</td>
+            <td class="c-step">Init repo &amp; skeleton</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>Git repo with <code>/ingest</code>, <code>/data</code>, <code>/web</code>, <code>/docs</code> · you · local + GitHub · day 0</td>
+            <td>Nothing is reproducible or schedulable until it is in version control. Must precede the crawler because GitHub Actions <em>is</em> the scheduler.</td>
+            <td><code>git init</code>, private-then-public GitHub repo, OGL-compatible licence, <code>uv</code> for Python dependencies.</td>
+            <td>Repo pushed; CI hello-world green.</td>
+            <td class="num">1 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">0.2</td>
+            <td class="c-step">Decision record</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>ADR-001 capturing the ten decisions from the viability analysis · you · <code>/docs</code> · day 0</td>
+            <td>Locks the repositioning so it is not silently re-litigated in week three. Feeds objective O5 directly.</td>
+            <td>One-page Markdown ADR linking back to the Session 01 log.</td>
+            <td>ADR committed.</td>
+            <td class="num">30 min</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">0.3</td>
+            <td class="c-step">Register for NHS API access</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>Request Service Search API v3 key · you · NHS Digital developer portal · day 0</td>
+            <td>Approval has unknown lead time, so start the bureaucratic clock in parallel with everything else. Becomes blocking if left late.</td>
+            <td>Online application through the digital.nhs.uk developer portal.</td>
+            <td>Key issued, or the refusal understood.</td>
+            <td class="num">30 min<br />+ wait</td>
+            <td><span class="chip k-risk">risk</span><span class="gate-body">Unknown approval lead time — the crawler must not depend on it.</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§1 — Start the clock</b><span>Week 1, days 1–3. The most time-critical section in the plan.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">1.1</td>
+            <td class="c-step">Crude full-estate capture</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>Fetch raw records for all ~9,000 English dental practices · you · local script · day 1</td>
+            <td><strong>History accrues only in wall-clock time.</strong> Every day without this is a day of the differentiating asset permanently lost. That alone puts it ahead of all design work.</td>
+            <td>Python with <code>httpx</code>, polite rate limit around 1 request per second, retries. Whichever route works on the day: API if the key has landed, otherwise nhs.uk pages.</td>
+            <td>Raw payloads for the full estate on disk.</td>
+            <td class="num">4–6 h</td>
+            <td><span class="chip k-risk">critical path</span><span class="gate-body">Highest-value step in the plan.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">1.2</td>
+            <td class="c-step">Append-only snapshot store</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>Date-stamped immutable raw payloads · you · <code>/data/snapshots/YYYY-MM-DD/</code> · day 1</td>
+            <td>Capture raw, parse later: you can re-parse forever but never re-fetch yesterday. Immutability must be in place <em>before</em> automation, or early history gets overwritten.</td>
+            <td>Gzipped JSON per practice in dated directories, committed to the repo — free, durable, versioned, zero infrastructure.</td>
+            <td>Two consecutive days captured and diffable.</td>
+            <td class="num">2 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">1.3</td>
+            <td class="c-step">Automate nightly</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>GitHub Actions cron around 03:00 UTC · you · GitHub · day 2</td>
+            <td>Makes accrual survive your attention. Daily rather than hourly: the source operates on a 90-day mandate, so hourly polling is three orders of magnitude of waste and reads as abusive.</td>
+            <td><code>.github/workflows/snapshot.yml</code>, repository secret for the API key, auto-commit of results.</td>
+            <td>Three consecutive unattended nights succeed.</td>
+            <td class="num">2 h</td>
+            <td><span class="chip k-gate">gate DG2</span><span class="gate-body">Ingestion reliability, partially satisfied here at step 3 instead of step 13.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">1.4</td>
+            <td class="c-step">Failure alarm</td>
+            <td><span class="pill p-next">next</span></td>
+            <td>Notify on crawl failure or volume anomaly · you · GitHub Actions · day 3</td>
+            <td>Silent crawler death is the one failure that destroys irreplaceable data. Cheap insurance, so it happens immediately rather than at hardening time.</td>
+            <td>Workflow-failure email, plus an assertion that record count sits within ±10% of the prior run.</td>
+            <td>A deliberately broken run alerts you.</td>
+            <td class="num">1 h</td>
+            <td><span class="chip k-risk">risk</span><span class="gate-body">Guards the core asset.</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§2 — Prove the signal</b><span>Week 1, days 4–5. This is the real DG1.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">2.1</td>
+            <td class="c-step">Field-level API spike</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Answer Q1: does v3 carry acceptance status for adults, children and referrals, plus a last-updated date? · you · notebook · day 4</td>
+            <td>The one thing viability could <em>not</em> confirm. Determines whether the availability pipeline is sanctioned-API or scrape-based, changing risk, cadence and terms-of-use posture. Cheap to answer, expensive to assume.</td>
+            <td>Pull a single record, dump every field, compare against the live nhs.uk profile for the same practice.</td>
+            <td>Documented field map; Q1 closed.</td>
+            <td class="num">3 h</td>
+            <td><span class="chip k-gate">gate DG1</span><span class="gate-body">Genuine go/no-go on the availability product.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">2.2</td>
+            <td class="c-step">Choose the availability route</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Decide API-only, hybrid or scrape · you · ADR-002 · day 4</td>
+            <td>Forces an explicit recorded decision instead of drift. Must follow the spike and precede any parser work.</td>
+            <td>ADR-002 carrying the field evidence. If scraping: record robots.txt position, rate-limit posture and the no-NHS-branding rule.</td>
+            <td>ADR committed; crawler updated.</td>
+            <td class="num">1 h</td>
+            <td><span class="chip k-risk">risk</span><span class="gate-body">If scrape-only: higher fragility. Add change-detection on page structure.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">2.3</td>
+            <td class="c-step">Snapshot → structured parser</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Parse raw snapshots into a tidy practice-day table · you · <code>/ingest/parse.py</code> · day 5</td>
+            <td>Separating parse from fetch means a parser bug costs a re-run rather than lost data. Only possible once the spike says where the fields are.</td>
+            <td>Python to Parquet, one row per practice per snapshot date, schema documented in <code>/docs</code>.</td>
+            <td>The full snapshot history parses clean.</td>
+            <td class="num">4 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§3 — The spine</b><span>Week 2. The unglamorous work everything else depends on.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">3.1</td>
+            <td class="c-step">Load ODS practice register</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Authoritative practice list and codes · you · <code>/ingest/ods.py</code> · week 2</td>
+            <td>Provides a stable identity backbone and the ODS codes nhs.uk does not expose. Needed before any joining can start.</td>
+            <td>ODS CSV download under OGL, filtered to England, refreshed monthly.</td>
+            <td>ODS table loaded; count sanity-checked.</td>
+            <td class="num">2 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">3.2</td>
+            <td class="c-step">Geocode via ONSPD</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Postcode to latitude/longitude, LSOA, ICB, region · you · <code>/ingest/geo.py</code> · week 2</td>
+            <td>Unlocks every spatial feature. ONSPD is free under OGL and removes any need for a paid geocoder.</td>
+            <td>ONSPD quarterly CSV, joined on postcode, unmatched rows flagged.</td>
+            <td>Over 99% of practices geocoded.</td>
+            <td class="num">3 h</td>
+            <td><span class="chip k-risk">risk</span><span class="gate-body">Unmatched postcodes need a manual fallback.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">3.3</td>
+            <td class="c-step">Entity resolution: nhs.uk ↔ ODS ↔ BSA</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Fuzzy-match on name and postcode; resolve many-to-many contract-to-site links · you · <code>/ingest/match.py</code> · week 2</td>
+            <td><strong>The hidden cost the charter never listed.</strong> No shared key exists between the three sources. Prerequisite for every supply-versus-demand output — all of §4 stalls without it.</td>
+            <td><code>rapidfuzz</code> over normalised name and postcode, postcode-blocked candidate generation, a manual review queue for low-confidence pairs, and a reported match rate.</td>
+            <td>Documented match rate plus reviewed exceptions.</td>
+            <td class="num">1–2 days</td>
+            <td><span class="chip k-high">highest schedule risk</span><span class="gate-body">Timebox to two days. Ship at whatever match rate you reach and publish the number.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">3.4</td>
+            <td class="c-step">LSOA population join</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>ONS population by LSOA and age band · you · <code>/ingest/pop.py</code> · week 2</td>
+            <td>The demand denominator. Without it, “dental desert” is an opinion; with it, it is a rate.</td>
+            <td>ONS mid-year estimates under OGL, aggregated to LSOA with child and adult splits.</td>
+            <td>Population table joined to geography.</td>
+            <td class="num">2 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§4 — Retroactive intelligence</b><span>Week 3. Passes DG3 without waiting for history to accrue.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">4.1</td>
+            <td class="c-step">Ingest NHSBSA activity history</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Contract-level monthly UDA and FP17 data, 2016 to present · you · <code>/ingest/bsa.py</code> · week 3</td>
+            <td><strong>The escape hatch.</strong> Gives roughly ten years of longitudinal truth on day one — what practices actually <em>delivered</em>, not what they claim. Only usable once 3.3 links contracts to sites.</td>
+            <td>NHSBSA Open Data Portal CSVs under OGL, loaded into DuckDB, refreshed monthly and incrementally.</td>
+            <td>Full history loaded; totals reconciled against published statistics.</td>
+            <td class="num">4 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">4.2</td>
+            <td class="c-step">Supply-vs-demand &amp; dental-desert model</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Activity per 1,000 population by LSOA and ICB · you · <code>/analysis/</code> · week 3</td>
+            <td>The genuinely unoccupied ground identified in viability. Needs both 3.4 and 4.1 in place.</td>
+            <td>DuckDB and GeoPandas; catchments by straight-line distance first, refined by drive time. Method published rather than hidden.</td>
+            <td>Reproducible notebook plus static GeoJSON and Parquet outputs.</td>
+            <td class="num">2 days</td>
+            <td><span class="chip k-gate">gate DG3</span><span class="gate-body">Insight beyond directory search — cleared in week 3 rather than week 9.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">4.3</td>
+            <td class="c-step">Freshness / trust scoring</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Per-practice staleness score against the 90-day rule · you · <code>/analysis/</code> · week 3</td>
+            <td>The most honest differentiator and simultaneously the legal shield. Nobody else exposes it. Needs §1 history and the 2.3 parser.</td>
+            <td>Days-since-reported buckets, a volatility flag and a never-updated flag. Always rendered as “reported X on DATE”, never as fact.</td>
+            <td>Score attached to every practice.</td>
+            <td class="num">4 h</td>
+            <td><span class="chip k-risk">compliance</span><span class="gate-body">No claim is ever presented as current fact.</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§5 — Public surface</b><span>Weeks 4–5. Thin on purpose.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">5.1</td>
+            <td class="c-step">Static data build step</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Pipelines to versioned static JSON and Parquet for the web app · you · <code>/data/dist/</code> · week 4</td>
+            <td>The decision that deletes the whole infrastructure row: no server database, no Redis, no API layer for v1. Must precede UI work so the UI has a stable contract.</td>
+            <td>Build script producing a bundled practice file, tiles and geo layers, with a versioned schema.</td>
+            <td>The app boots from static files alone.</td>
+            <td class="num">4 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">5.2</td>
+            <td class="c-step">Postcode search &amp; results</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Enter a postcode, get ranked nearby practices with freshness labels · you · <code>/web</code> · week 4</td>
+            <td>Table-stakes entry point for the general-public audience — framed around freshness rather than an acceptance filter that returns nothing.</td>
+            <td>Next.js with client-side distance calculation (the dataset fits in the browser) and ONSPD lookup.</td>
+            <td>Works for any valid English postcode.</td>
+            <td class="num">1 day</td>
+            <td><span class="chip k-risk">product risk</span><span class="gate-body">Never lead with “accepting” as a filter — around 90% of results would be empty.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">5.3</td>
+            <td class="c-step">Interactive map &amp; desert layer</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Practice markers plus an LSOA choropleth · you · <code>/web</code> · week 4</td>
+            <td>Where the §4 analysis becomes legible. Follows 5.2 so that search is proven first.</td>
+            <td>MapLibre GL with Protomaps/OSM tiles (ODbL attribution) over static GeoJSON.</td>
+            <td>Map renders England, layers toggle, usable on mobile.</td>
+            <td class="num">1–2 days</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">5.4</td>
+            <td class="c-step">Practice profile pages</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Per-practice detail: contact, reported status and date, availability timeline, activity history · you · <code>/web</code> · week 5</td>
+            <td>Where the longitudinal record meets an individual user need — and the most search-visible surface on the site.</td>
+            <td>Static generation, one page per practice, sparkline timeline.</td>
+            <td>Around 9,000 pages build and deploy.</td>
+            <td class="num">1 day</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">5.5</td>
+            <td class="c-step">Open data downloads</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Bulk CSV and Parquet plus method notes · you · <code>/web/data</code> · week 5</td>
+            <td>Serves analysts, policy makers, press and researchers — four of the six named audiences — at near-zero cost. The cheapest credibility in the plan.</td>
+            <td>Static file hosting, a data dictionary page and OGL attribution.</td>
+            <td>Downloads live with a dictionary.</td>
+            <td class="num">3 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§6 — Ship</b><span>Week 6.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">6.1</td>
+            <td class="c-step">Compliance &amp; framing pass</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>No NHS logo or implied endorsement; disclaimers, privacy notice, attributions · you · whole site · week 6</td>
+            <td>Cheap now, expensive to retrofit after launch. Must precede public release.</td>
+            <td>Checklist review against NHS identity rules, OGL and ODbL attribution, an explicit “not affiliated with the NHS” statement, and status-as-reported wording everywhere.</td>
+            <td>Checklist signed off in <code>/docs</code>.</td>
+            <td class="num">3 h</td>
+            <td><span class="chip k-gate">gate DG5</span><span class="gate-body">Fit for public release.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">6.2</td>
+            <td class="c-step">Deploy &amp; measure</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Production deploy, domain, privacy-respecting analytics · you · Vercel · week 6</td>
+            <td>Nothing is real until it is public. Last because DG3 and DG4 must clear first.</td>
+            <td>Vercel deploy, custom domain, Plausible or Fathom, Lighthouse check.</td>
+            <td>Live URL; mobile Lighthouse above 90.</td>
+            <td class="num">4 h</td>
+            <td><span class="chip k-gate">gate DG4</span><span class="gate-body">Usability and performance.</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">6.3</td>
+            <td class="c-step">Tell three people who matter</td>
+            <td><span class="pill p-plan">planned</span></td>
+            <td>Approach a journalist, an ICB analyst and a dental-access campaigner · you · email · week 6</td>
+            <td>The exceptional tier runs through being <em>used</em>, not being built. Distribution is a build step, not an afterthought.</td>
+            <td>Short email with a link and one striking finding drawn from your own data.</td>
+            <td>Three approaches made; feedback logged.</td>
+            <td class="num">2 h</td>
+            <td><span class="chip k-risk">risk</span><span class="gate-body">The most-skipped step in projects like this.</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§7 — Continuous</b><span>Runs alongside everything above.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">7.1</td>
+            <td class="c-step">Session journal</td>
+            <td><span class="pill p-cont">continuous</span></td>
+            <td>Log each working session to <code>Documenting the Journey/</code> · you · ongoing</td>
+            <td>Objective O5 and half the programme's stated purpose. Continuous because reconstructing reasoning after the fact is impossible.</td>
+            <td>One Markdown file per session: decisions, dead ends and observations on the AI-assisted method.</td>
+            <td>Every session logged.</td>
+            <td class="num">15 min<br />per session</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">7.2</td>
+            <td class="c-step">Data-quality dashboard</td>
+            <td><span class="pill p-cont">continuous</span></td>
+            <td>Freshness, completeness, match rate, crawl health · you · static page · from week 3</td>
+            <td>Publishing your own limitations <em>is</em> the trust product. It doubles as your early-warning system.</td>
+            <td>Static page generated by the nightly build.</td>
+            <td>Page live and updating itself.</td>
+            <td class="num">4 h</td>
+            <td><span class="dash">—</span></td>
+          </tr>
+
+          <tr class="band"><td colspan="9"><span class="band-label"><b>§8 — Deferred</b><span>Explicitly not now. Recorded so they stay decided rather than nagging.</span></span></td></tr>
+
+          <tr>
+            <td class="c-seq">8.1</td>
+            <td class="c-step">Accounts &amp; email alerts</td>
+            <td><span class="pill p-defer">deferred</span></td>
+            <td><span class="dash">—</span></td>
+            <td>Highest effort, greatest GDPR exposure (controller duties, consent, deliverability), and the feature most directly contested by a paid incumbent. Also contradicts the charter's own exclusion of authentication.</td>
+            <td>Revisit only if users ask unprompted.</td>
+            <td><span class="dash">—</span></td>
+            <td><span class="dash">—</span></td>
+            <td><span class="chip k-shut">post-v1</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">8.2</td>
+            <td class="c-step">Public REST API</td>
+            <td><span class="pill p-defer">deferred</span></td>
+            <td><span class="dash">—</span></td>
+            <td>Static bulk downloads at 5.5 serve roughly 95% of real demand at close to 0% of the operational cost.</td>
+            <td>Revisit when someone actually requests programmatic access.</td>
+            <td><span class="dash">—</span></td>
+            <td><span class="dash">—</span></td>
+            <td><span class="chip k-shut">post-v1</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">8.3</td>
+            <td class="c-step">Public-transport travel times</td>
+            <td><span class="pill p-defer">deferred</span></td>
+            <td><span class="dash">—</span></td>
+            <td>Straight-line plus drive time answers the question well enough. TfL and GTFS integration is a multi-week rabbit hole for marginal gain.</td>
+            <td>Revisit after user feedback.</td>
+            <td><span class="dash">—</span></td>
+            <td><span class="dash">—</span></td>
+            <td><span class="chip k-shut">post-v1</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">8.4</td>
+            <td class="c-step">Scotland, Wales &amp; Northern Ireland</td>
+            <td><span class="pill p-defer">deferred</span></td>
+            <td><span class="dash">—</span></td>
+            <td>Entirely separate systems and datasets — effectively three further projects. The charter's “UK” wording should be corrected to “England”.</td>
+            <td>Revisit only once England v1 is stable.</td>
+            <td><span class="dash">—</span></td>
+            <td><span class="dash">—</span></td>
+            <td><span class="chip k-shut">post-v1</span></td>
+          </tr>
+          <tr>
+            <td class="c-seq">8.5</td>
+            <td class="c-step">Reviews, ratings &amp; predictive modelling</td>
+            <td><span class="pill p-defer">cut</span></td>
+            <td><span class="dash">—</span></td>
+            <td>Google's terms prohibit storage, redistribution and competing directories; CQC does not rate primary dental care; and prediction built on data this unreliable is indefensible.</td>
+            <td>Cut, not deferred.</td>
+            <td><span class="dash">—</span></td>
+            <td><span class="dash">—</span></td>
+            <td><span class="chip k-shut">closed</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <h2>Shape of the commitment</h2>
+    </div>
+    <div class="callouts">
+      <div class="stat">
+        <span class="k">Timeline</span>
+        <span class="v">~6 weeks</span>
+        <span class="n">Of evenings and weekends to a public v1.</span>
+      </div>
+      <div class="stat">
+        <span class="k">Running cost</span>
+        <span class="v">£0–15 / month</span>
+        <span class="n">A domain, plus free tiers on GitHub Actions, Vercel and map tiles.</span>
+      </div>
+      <div class="stat">
+        <span class="k">Critical path</span>
+        <span class="v">§1, then 3.3</span>
+        <span class="n">Start the clock immediately; defend the two-day entity-resolution timebox.</span>
+      </div>
+      <div class="stat">
+        <span class="k">Open question</span>
+        <span class="v">Q1 by day 4</span>
+        <span class="n">Whether the API carries acceptance status decides the whole availability route.</span>
+      </div>
+    </div>
+
+    <div class="imperative">
+      <h3>The one thing that matters this week</h3>
+      <p><strong>Steps 1.1 through 1.4.</strong> Everything else in this ledger can slip a month without lasting
+        harm. Those four cannot — each night they are not running is a night of history that no amount of later
+        effort recovers.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>NHS Dentist Intelligence Platform · Build Plan v1 · 25 July 2026</span>
+    <span>Supersedes the 15-activity delivery plan in Programme Charter v0.1, following the viability analysis
+      recorded in Session 01. Not affiliated with, endorsed by, or connected to the NHS.</span>
+  </footer>
+
+</div>

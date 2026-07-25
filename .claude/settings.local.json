@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:commonslibrary.parliament.uk)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:www.dentistalert.co.uk)",
+      "WebFetch(domain:digital.nhs.uk)",
+      "Artifact"
+    ]
+  }
+}

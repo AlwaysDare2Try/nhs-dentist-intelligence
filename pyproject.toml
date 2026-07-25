@@ -1,0 +1,32 @@
+[project]
+name = "nhs-dentist-intelligence"
+version = "0.1.0"
+description = "Longitudinal availability and supply-vs-demand intelligence for NHS dentistry in England"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "httpx>=0.27",
+    "selectolax>=0.3.21",
+    "tenacity>=8.2",
+]
+
+[project.optional-dependencies]
+analysis = [
+    "duckdb>=1.1",
+    "polars>=1.0",
+    "pyarrow>=17.0",
+    "rapidfuzz>=3.9",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

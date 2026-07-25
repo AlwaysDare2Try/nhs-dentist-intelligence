@@ -1,0 +1,19 @@
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Build outputs are regenerated from snapshots — snapshots themselves ARE committed (see ADR-001)
+data/dist/
+data/working/
+*.duckdb
+
+# Node / Next.js (§5)
+node_modules/
+web/.next/
+web/out/
+
+.env
+.env.local
