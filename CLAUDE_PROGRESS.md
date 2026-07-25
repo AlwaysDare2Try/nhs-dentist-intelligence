@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-25 — Loop 0
+**Last updated:** 2026-07-25 — end of Loop 4
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -12,123 +12,124 @@
 
 Build the public longitudinal record of NHS dental provision in England: nightly availability snapshots that accrue history nobody else holds, joined to ~10 years of NHSBSA activity data and LSOA population, published as a free searchable site plus open bulk downloads.
 
-**The one thing that matters most:** ledger steps 1.1–1.4 (capture → store → automate → alarm). History accrues only in wall-clock time. Every night the crawler is not running is history that no later effort recovers. Everything else in the plan can slip a month without lasting harm.
+**The one thing that matters most:** history accrues only in wall-clock time. Every night the crawler does not run is history no later effort recovers.
 
 ---
 
 ## Current loop
 
-**Loop 1 — Start the clock** (ledger §1). In progress. Loop 0 complete.
+**Loop 5 — pending.** Loops 0–4 complete.
 
 ### What is being worked on now
 
-Everything in §1 *except the fetching itself* is now built and tested — the store, the alarms, the schedule. What remains is `ingest/fetch.py`, which is gated on one unknown.
+**A full-estate capture is running in the background** — the first night of history. 6,407 practices at ~0.97 req/s, zero failures so far, ETA roughly 100 minutes from 18:30 local.
 
-- A sub-agent is investigating the **fetch route**: how to enumerate all ~9,000 English dental practices and pull per-practice detail without an API key, and whether that data carries acceptance status and a last-updated date (open question **Q1**, gate **DG1**). Result pending — the fetcher is written the moment it lands.
+Progress is checkable at any time:
 
-### Design deviation logged this loop
+```bash
+find data/snapshots/blobs -name '*.gz' | wc -l    # out of 6,407
+```
 
-The ledger specifies *"gzipped JSON per practice in dated directories"* for step 1.2. Built instead as a **content-addressed store**: raw payloads in `data/snapshots/blobs/<sha256>.gz`, plus a per-night manifest mapping practice → hash.
-
-**Why:** taken literally the ledger design writes ~9,000 files per night into git — 3.3M files a year, and far worse if the route turns out to be HTML pages rather than JSON records. Content addressing means an unchanged practice costs zero additional bytes, while every night still resolves to a complete, independently parseable view of the estate. The append-only guarantee is unchanged. No ADR raised — this is an implementation choice, not a reversal of an agreed decision.
+The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` picks up where it stopped rather than re-fetching.
 
 ---
 
 ## Completed work
 
-| Ledger | Item | Notes |
-|---|---|---|
-| 0.1 | Git repo initialised | Repo root is the project folder; `/ingest` `/data` `/docs` `/analysis` `/web` `.github/workflows` created |
-| 0.1 | Python toolchain | `uv` installed (was absent); Python 3.12.13 installed; deps synced — httpx, selectolax, tenacity, duckdb, polars, pyarrow, rapidfuzz, pytest, ruff |
-| 0.1 | CI workflow | `.github/workflows/ci.yml` — ruff + pytest on push/PR |
-| 0.2 | **ADR-001** written | `docs/ADR-001-repositioning-and-architecture.md` — locks decisions D1–D10 and constraints C1–C9 |
-| 1.2 | **Append-only snapshot store** | `ingest/snapshot.py` — content-addressed blobs + nightly manifest + run metadata. Completed days refuse overwrite; aborted days can be retried |
-| 1.4 | **Failure alarm logic** | `ingest/health.py` — ±10% volume drift vs prior run, 5,000-record floor, 5% failure-rate ceiling. Non-zero exit fails the workflow, which sends the email |
-| 1.3 | **Nightly workflow** | `.github/workflows/snapshot.yml` — 03:00 UTC cron, 5.5h timeout, auto-commit of captures. Cannot *run* until the repo has a remote (P2) |
-| 1.1 | **Polite HTTP client** | `ingest/client.py` — global 1 req/sec token bucket shared across workers, honest User-Agent with contact URL, `Retry-After` honoured, exponential backoff with jitter, 429 backs off the whole crawl. Route-agnostic so ADR-002 can change the route without touching it |
-| — | README + Apache-2.0 licence | Carries the C2 "not affiliated with the NHS" statement and the OGL/ODbL attribution table |
+| Ledger | Item | Where | Notes |
+|---|---|---|---|
+| 0.1 | Repo, skeleton, toolchain, CI | `.github/workflows/ci.yml` | `uv` + Python 3.12.13 installed (system was 3.9) |
+| 0.2 | **ADR-001** | `docs/ADR-001-…md` | Locks decisions D1–D10 and constraints C1–C9 |
+| 1.1 | Polite HTTP client | `ingest/client.py` | Global 1 req/s, honest UA, `Retry-After`, 429 backs off whole crawl |
+| 1.1 | **Full-estate fetcher** | `ingest/fetch.py` | Sitemap enumeration → per-practice capture, resumable |
+| 1.2 | Append-only snapshot store | `ingest/snapshot.py` | Content-addressed; completed days refuse overwrite |
+| 1.3 | Nightly workflow | `.github/workflows/snapshot.yml` | 03:00 UTC cron — **cannot run until P2 is resolved** |
+| 1.4 | Failure alarms | `ingest/health.py` | ±10% volume drift, 5,000 floor, 5% failure ceiling |
+| 2.1 | Field-level spike → **Q1 closed** | ADR-002 | **Gate DG1 cleared** |
+| 2.2 | **ADR-002** — route decision | `docs/ADR-002-…md` | Scrape nhs.uk; defer the API |
+| 2.3 | Snapshot parser | `ingest/parse.py` | All five acceptance states; markup-change alarm |
+| 3.1 | ODS register loader | `ingest/ods.py` | 9,779 active practices; **99.2%** map to nhs.uk |
+
+**65 tests green, lint clean.** Suite runs in ~6s.
+
+### Key findings so far
+
+- **Q1 answered YES.** nhs.uk carries acceptance status *and* a "Last confirmed" date, at the same cohort granularity the v3 API offers. Scraping loses nothing material, so the build did not wait on an API key.
+- **The estate is 6,407 published profiles**, not ~9,000. The 9,779 figure is ODS *active dental practices*, which includes private-only practices and prison dental units with no public profile.
+- **Q2, first leg answered.** 6,358 / 6,407 nhs.uk practices (99.2%) resolve to an active ODS record via the zero-padding convention alone. The NHSBSA contract leg remains for 3.3.
+- **Freshness is visible on day one.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06** — some practices have not confirmed their status in fifteen years. One request yields a freshness distribution for the whole estate, before any history of our own accrues. This materially strengthens step 4.3.
+- **Compliance is clean.** robots.txt permits these paths, terms carry no anti-scraping clause, content is OGL. Our honest bot User-Agent is accepted — no browser spoofing is used. Required attribution wording is pinned in ADR-002 for the 6.1 pass.
 
 ---
 
 ## Remaining DO items
 
-Ordered by the sequence actually being worked, not by ledger number. §8 items are **excluded** (deferred/cut — not to be built).
+§8 items are **excluded** (deferred/cut — not to be built).
 
 | Ledger | Item | State |
 |---|---|---|
-| 0.1 | Push to GitHub, confirm CI green | Blocked — see Parked |
-| 1.1 | Crude full-estate capture (~9,000 practices) | **Next — critical path.** Gated on the route investigation |
-| 1.2 | Append-only snapshot store | ✅ Done |
-| 1.3 | Nightly GitHub Actions cron ~03:00 UTC | ✅ Written — blocked on P2 to actually run |
-| 1.4 | Failure alarm | ✅ Done |
-| 2.1 | Field-level spike → answers Q1 (**gate DG1**) | In flight — folded into the route investigation |
-| 2.2 | ADR-002 — choose availability route (API / hybrid / scrape) | After 2.1 |
-| 2.3 | Snapshot → structured parser, one row per practice per date | After 2.2 |
-| 3.1 | Load ODS practice register | Week 2 |
-| 3.2 | Geocode via ONSPD → lat/long, LSOA, ICB, region | Week 2 |
-| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | Week 2 — **highest schedule risk, timebox 2 days** |
-| 3.4 | LSOA population join (demand denominator) | Week 2 |
-| 4.1 | Ingest NHSBSA activity history 2016→ | Week 3 |
-| 4.2 | Supply-vs-demand / dental-desert model (**gate DG3**) | Week 3 |
-| 4.3 | Freshness / trust scoring | Week 3 |
-| 5.1 | Static data build → `data/dist/` | Week 4 |
-| 5.2 | Postcode search & ranked results | Week 4 |
-| 5.3 | Interactive map + desert choropleth | Week 4 |
-| 5.4 | Practice profile pages (~9,000 static) | Week 5 |
-| 5.5 | Open data downloads + data dictionary | Week 5 |
-| 6.1 | Compliance & framing pass (**gate DG5**) | Week 6 |
-| 6.2 | Deploy & measure (**gate DG4**) | Week 6 |
-| 6.3 | Tell three people who matter | Week 6 |
-| 7.1 | Session journal | Continuous |
-| 7.2 | Data-quality dashboard | Continuous, from week 3 |
+| 1.1 | First full capture | **Running now** |
+| 3.2 | Geocode via ONSPD → lat/long, LSOA, ICB, region + **England filter** | Next |
+| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days** |
+| 3.4 | LSOA population join (demand denominator) | After 3.2 |
+| 4.1 | Ingest NHSBSA activity history 2016→ | After 3.3 |
+| 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3** |
+| 4.3 | Freshness / trust scoring | Strengthened by the sitemap `lastmod` finding |
+| 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | Weeks 4–5; needs Node (P4) |
+| 6.1–6.3 | Compliance pass, deploy, tell three people | **Gates DG5 / DG4** |
+| 7.1 | Session journal | Continuous — **owed for this session** |
+| 7.2 | Data-quality dashboard | From week 3 |
 
 ---
 
 ## Parked / blocked — needs human action
 
-| # | Item | Why blocked | What I need from you |
+| # | Item | Why blocked | What I need |
 |---|---|---|---|
-| P1 | **0.3 — NHS Service Search API v3 key** | Registration requires a human to complete an application on the NHS Digital developer portal. Unknown approval lead time | You to submit the application. The crawler is deliberately built **not** to depend on it, so this is not on the critical path — but the clock should start early |
-| P2 | **GitHub remote / push** | No `gh` CLI installed and no authenticated GitHub account in this environment. CI cannot run and the nightly cron cannot be scheduled until the repo has a remote | Create an empty GitHub repo and either install+auth `gh`, or give me the remote URL with push access. **This one does gate step 1.3 (nightly automation).** Local snapshots still accrue in the meantime |
-| P3 | **Q3 — your viability conditions** | Plan assumes solo builder, near-zero budget, public release, no NHS partnership | Confirm or correct. A budget or an NHS/ICB relationship changes the plan, not just the estimates. Proceeding on the assumed conditions until told otherwise |
-| P4 | Node.js not installed | Needed for §5 web app (week 4) | Not urgent — I'll install it when §5 starts |
+| **P2** | **GitHub remote** | No `gh` CLI, no authenticated account. CI cannot run and the nightly cron cannot fire | **The real blocker.** Create an empty GitHub repo and give me the URL with push access, or install + auth `gh`. Until then history accrues only when this machine runs it manually |
+| P1 | NHS Service Search API v3 key | Human must apply on the NHS Digital developer portal; production needs a signed Online Connection Agreement | Not on the critical path — ADR-002 chose a route that does not need it. Worth starting for the timestamp precision it would later add |
+| P3 | Q3 — your viability conditions | Plan assumes solo builder, near-zero budget, public release, no NHS partnership | Confirm or correct. Proceeding on the assumed conditions |
+| P4 | Node.js not installed | Needed for §5 web app | Not urgent — will install when §5 starts |
 
 ---
 
 ## Files changed
 
-**Loop 0** — `pyproject.toml`, `.gitignore`, `.github/workflows/ci.yml`, `docs/ADR-001-repositioning-and-architecture.md`, `README.md`, `LICENSE`, `CLAUDE_PROGRESS.md`, directory skeleton. Commit `6409125`.
-
-**Loop 1a** — `ingest/snapshot.py`, `ingest/health.py`, `tests/test_snapshot.py`, `.github/workflows/snapshot.yml`. Commit `e2c7a07`.
-
-**Loop 1b** — `ingest/client.py`, `tests/test_client.py`. Commit `01a329e`.
+| Loop | Commit | Files |
+|---|---|---|
+| 0 | `6409125` | `pyproject.toml`, `.gitignore`, `ci.yml`, `ADR-001`, `README`, `LICENSE` |
+| 1a | `e2c7a07` | `ingest/snapshot.py`, `ingest/health.py`, `snapshot.yml`, tests |
+| 1b | `01a329e` | `ingest/client.py`, tests |
+| 2 | `95e7b0a` | `ingest/fetch.py`, `docs/ADR-002-availability-route.md`, tests |
+| 3 | `0dd702d` | `ingest/parse.py`, tests |
+| 4 | `da148db` | `ingest/ods.py`, `data/reference/ods/`, tests |
 
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| `uv run pytest -q` | **27 passed** — roundtrip fidelity, cross-night dedup, overwrite refusal, abort-and-retry, failure recording, all four health alarms, plus rate-limit enforcement, retry/no-retry semantics and User-Agent honesty |
+| `uv run pytest -q` | **65 passed**, ~6s |
 | `uv run ruff check .` | Clean |
-| `uv sync --all-extras` | Clean |
-| Network — `nhs.uk/service-search/find-a-dentist` | 200 OK |
-| Network — `api.nhs.uk` host | Resolves (404 on bare path, as expected without a key) |
-| CI green on GitHub | Not yet — blocked on P2 (no remote) |
+| Live smoke capture (8 practices) | Passed — status + date present in payloads |
+| Live ODS register pull | 9,779 practices in 10 requests |
+| Byte-stability of appointments pages across fetches | Identical — content-addressed dedup is effective |
+| CI green on GitHub | **Not yet — blocked on P2** |
 
-## Issues found
+## Issues found and resolved
 
-- System Python was 3.9.6; plan requires 3.12. Resolved by installing `uv` + Python 3.12.13.
-- `uv`, `node` and `gh` were all absent. `uv` resolved; the other two recorded as P4/P2.
-- Ledger 1.2's literal file layout does not scale — see the design deviation above.
+- Test harness monkey-patched `__aenter__` on the instance, but `async with` resolves dunders on the *type* — five client tests were silently hitting the live network. Fixed by making the transport injectable.
+- Test suite took 90s because 503 tests slept through real exponential backoff. Backoff scale is now injectable; suite is 6s.
+- Ledger 1.2's literal "gzipped JSON per practice per night" would write ~3.3M files a year. Replaced with a content-addressed store — same guarantee, a fraction of the size. The whole ODS register is 256 KB on disk.
+- Cohort parsing initially risked reading urgent-care bullets present on every page in England, which would have marked the entire estate as accepting. Extraction is now scoped to the routine-care region.
 
 ---
 
 ## Next planned action
 
-**Loop 1b — build `ingest/fetch.py`** (ledger 1.1) the moment the route investigation reports. Enumerate the full English dental estate, fetch each practice's raw payload at ~1 req/sec with retries and resume-on-interrupt, and hand each one to `SnapshotWriter`. Raw and unparsed — parsing is step 2.3.
-
-Then run a real full-estate capture. **Target: night one of history captured today**, because today's data cannot be fetched tomorrow.
-
-After that: ADR-002 recording the chosen route (2.2), then the parser (2.3).
+1. **When the capture finishes**, run `uv run python ingest/health.py` and `uv run python ingest/parse.py` to produce the first practice-day table, and record the real status distribution across England.
+2. **Step 3.2 — ONSPD geocoding.** Postcode → lat/long, LSOA, ICB, region, and the authoritative England filter that 3.1 deliberately left undone.
+3. **Step 7.1 — write the Session 02 journal entry** to `Documenting the Journey/`. Owed for this session.
+4. Then 3.4 (population) and 3.3 (entity resolution, timeboxed).
 
 ---
 
@@ -138,4 +139,9 @@ If a session ends mid-flight, restart with:
 
 > Read `CLAUDE_PROGRESS.md` in `/Users/dare2try/Claude Projects/CLD DentistApp` and continue the loops from **Next planned action**.
 
-Rules on resume: do not re-derive the plan; the ledger is agreed ground. Do not build §8 items. Check `data/snapshots/` for the most recent capture date first — **if last night's snapshot is missing, running the crawler outranks every other task.** Update this file after every loop and after every sub-agent completion.
+Rules on resume:
+
+- Do not re-derive the plan; the ledger is agreed ground. Do not build §8 items.
+- **Check `data/snapshots/` for the most recent capture date first. If last night's snapshot is missing, running `uv run python ingest/fetch.py` outranks every other task.** It is resumable and safe to re-run — a completed day refuses to be overwritten.
+- `export PATH="$HOME/.local/bin:$PATH"` — `uv` lives there and is not on the default PATH.
+- Update this file after every loop and after every sub-agent completion.
