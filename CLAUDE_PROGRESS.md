@@ -54,8 +54,9 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 3.2 | Geocoding + geography | `ingest/geo.py` | **99.8%** matched; England filter, LSOA, ICB, IMD |
 | 3.4 | LSOA population denominator | `ingest/pop.py` | 33,755 LSOAs; 58,620,101 people; clean 0–17 / 18+ |
 | 7.1 | Session 02 journal | `Documenting the Journey/Session-02_…md` | Loops, deviations, dead ends |
+| 4.3 | Freshness / trust scoring | `analysis/freshness.py` | 90-day mandate buckets, volatility, C1-compliant wording |
 
-**96 tests green, lint clean.** Suite runs in ~6s.
+**122 tests green, lint clean.** Suite runs in ~6s.
 
 ### Key findings so far
 
@@ -79,7 +80,7 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 4.1 | Ingest NHSBSA activity history | **Sub-agent in flight** |
 | 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days.** Waiting on 4.1's join-key findings |
 | 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3.** Must be catchment-based, per the 80.6% finding |
-| 4.3 | Freshness / trust scoring | Strengthened by the sitemap `lastmod` finding |
+| 4.3 | Freshness / trust scoring | ✅ Module + tests done; needs the capture to run against real data |
 | 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | Weeks 4–5; needs Node (P4) |
 | 6.1–6.3 | Compliance pass, deploy, tell three people | **Gates DG5 / DG4** |
 | 7.1 | Session journal | Continuous — **owed for this session** |
