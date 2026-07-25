@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-25 — end of Loop 9
+**Last updated:** 2026-07-25 — end of Loop 11
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -18,11 +18,11 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loops 0–9 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
+**Loops 0–11 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
 
 ### What is being worked on next
 
-**Step 3.3 — entity resolution**, now unblocked and with a measured starting point rather than a guess (see the join bridge below). Then 4.2, the dental-desert model.
+All of §1–§4 is now complete. **Next: §5 — the public surface** (static build, postcode search, map, profile pages, downloads). That needs Node.js installed (P4). Also outstanding: 7.2, the data-quality dashboard.
 
 ### Night one is captured, parsed and committed
 
@@ -67,8 +67,10 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 7.1 | Session 02 journal | `Documenting the Journey/Session-02_…md` | Loops, deviations, dead ends |
 | 4.3 | Freshness / trust scoring | `analysis/freshness.py` | Two age signals; **100%** of the estate now has an age |
 | 4.1 | NHSBSA activity history | `ingest/bsa.py` | 847,405 contract-months, 120 months, 9,891 contracts |
+| 3.3 | **Entity resolution** | `ingest/match.py` | **91.4%** matched; 495 queued for review |
+| 4.2 | **Dental-desert model** | `analysis/desert.py` + `ingest/lsoa.py` | **Gate DG3 cleared.** 2SFCA over 33,755 LSOAs |
 
-**148 tests green, lint clean.** Suite runs in ~6s.
+**186 tests green, lint clean.** Suite runs in ~7s.
 
 ### Key findings so far
 
@@ -79,6 +81,8 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 - **80.6% of English LSOAs contain no dental practice at all** — 27,193 of 33,755. This settles a design question for 4.2: the dental-desert model must be **catchment-based** (distance to nearest N practices), because "practices in my LSOA" would report four-fifths of England as a total desert.
 - **NHS dental activity has not recovered from the pandemic.** Pre-COVID ~80M UDAs/yr; 2020 collapsed to 31.4M; recovery has plateaued at ~70M — roughly 12% below pre-pandemic, five years on. This is the strongest headline finding so far, and it doubles as a validity check that the ingest is correct.
 - **The BSA join bridge is measured, not assumed** (input to 3.3). The BSA key is `CONTRACT_NUMBER`, not an ODS code, so there is no free join. But every contract carries a postcode, 98.5% of which exist in ODS, and **6,219 of 7,005 contracts (88.8%) resolve to exactly one ODS practice on postcode alone.** 678 are ambiguous (postcode holds >1 practice). That bounds what 3.3 must solve by name matching to roughly 11% of the estate.
+- **The worst-served tenth of England gets about half the national median** of accessible NHS dental activity (592 vs 1,159 UDAs per 1,000). 466,027 people live in an LSOA with no practice within 10 km; 3.2M have none within 5 km.
+- **Entity resolution landed at 91.4%**, with 495 contracts queued for review rather than guessed. Name similarity turned out to be a weak signal by nature — BSA names the contract holder, ODS names the site, often generically — so postcode does the work and the review queue holds the genuinely ambiguous.
 - **Population reconciles exactly.** England mid-2024 = 58,620,101, matching the published ONS figure; children + adults sums to total; 100% of practice-bearing LSOAs have a population figure.
 - **Compliance is clean.** robots.txt permits these paths, terms carry no anti-scraping clause, content is OGL. Our honest bot User-Agent is accepted — no browser spoofing is used. Required attribution wording is pinned in ADR-002 for the 6.1 pass.
 
@@ -90,12 +94,9 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 
 | Ledger | Item | State |
 |---|---|---|
-| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **NEXT. Highest schedule risk — timebox 2 days.** Starting point measured: 88.8% resolve on postcode alone |
-| 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3.** Must be catchment-based, per the 80.6% finding |
-| 4.3 | Freshness / trust scoring | ✅ Module + tests done; needs the capture to run against real data |
-| 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | Weeks 4–5; needs Node (P4) |
+| 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | **NEXT.** Needs Node (P4) |
 | 6.1–6.3 | Compliance pass, deploy, tell three people | **Gates DG5 / DG4** |
-| 7.1 | Session journal | Continuous — **owed for this session** |
+| 7.1 | Session journal | Continuous — Session 02 written; **needs updating for loops 8–11** |
 | 7.2 | Data-quality dashboard | From week 3 |
 
 ---
@@ -128,12 +129,14 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | — | `75e55d8`, `a70a900` | **Night one snapshot**, corrections |
 | 8 | `d9c6c25` | Freshness rework for the 90-day reset |
 | 9 | `6a43387` | `ingest/bsa.py`, `data/reference/bsa/`, tests |
+| 10 | `2ac6698` | `ingest/match.py`, tests |
+| 11 | `409653e` | `analysis/desert.py`, `ingest/lsoa.py`, `data/reference/lsoa/`, tests |
 
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| `uv run pytest -q` | **148 passed**, ~6s |
+| `uv run pytest -q` | **186 passed**, ~7s |
 | `uv run ruff check .` | Clean |
 | Live smoke capture (8 practices) | Passed — status + date present in payloads |
 | Live ODS register pull | 9,779 practices in 10 requests |
