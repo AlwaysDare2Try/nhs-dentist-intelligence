@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-25 — end of Loop 6
+**Last updated:** 2026-07-25 — end of Loop 9
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -18,11 +18,11 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loops 0–7 complete. Session halted by a spend limit — see below.**
+**Loops 0–9 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
 
-### ⚠️ Account hit its monthly spend limit
+### What is being worked on next
 
-The sub-agent building step 4.1 was terminated mid-run by the limit. Raise it at `claude.ai/settings/usage` to continue. Nothing is lost: all completed work is committed, and `data/snapshots/` holds night one intact.
+**Step 3.3 — entity resolution**, now unblocked and with a measured starting point rather than a guess (see the join bridge below). Then 4.2, the dental-desert model.
 
 ### Night one is captured, parsed and committed
 
@@ -65,9 +65,10 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 3.2 | Geocoding + geography | `ingest/geo.py` | **99.8%** matched; England filter, LSOA, ICB, IMD |
 | 3.4 | LSOA population denominator | `ingest/pop.py` | 33,755 LSOAs; 58,620,101 people; clean 0–17 / 18+ |
 | 7.1 | Session 02 journal | `Documenting the Journey/Session-02_…md` | Loops, deviations, dead ends |
-| 4.3 | Freshness / trust scoring | `analysis/freshness.py` | 90-day mandate buckets, volatility, C1-compliant wording |
+| 4.3 | Freshness / trust scoring | `analysis/freshness.py` | Two age signals; **100%** of the estate now has an age |
+| 4.1 | NHSBSA activity history | `ingest/bsa.py` | 847,405 contract-months, 120 months, 9,891 contracts |
 
-**122 tests green, lint clean.** Suite runs in ~6s.
+**148 tests green, lint clean.** Suite runs in ~6s.
 
 ### Key findings so far
 
@@ -76,6 +77,8 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 - **Q2, first leg answered.** 6,358 / 6,407 nhs.uk practices (99.2%) resolve to an active ODS record via the zero-padding convention alone. The NHSBSA contract leg remains for 3.3.
 - **⚠️ CORRECTED — nhs.uk resets status after 90 days.** An earlier note here claimed some practices "have not confirmed their status in fifteen years". That was wrong: `lastmod` is *page* modification, not confirmation. Night one proved it — every practice with a declared status was confirmed within **89 days**, and no practice with a pre-2026 `lastmod` has any declared status at all (all 447 read `not_confirmed` or `referral_only`). **`days_since_confirmed` is therefore capped at 90 by construction** and is weak as a differentiator. The decade of silence lives in the `lastmod` of the undeclared 29.1% — 51 practices untouched since 2011, all reading "not confirmed". **Step 4.3 must derive freshness for undeclared practices from `lastmod`, not from a confirmation date that does not exist.**
 - **80.6% of English LSOAs contain no dental practice at all** — 27,193 of 33,755. This settles a design question for 4.2: the dental-desert model must be **catchment-based** (distance to nearest N practices), because "practices in my LSOA" would report four-fifths of England as a total desert.
+- **NHS dental activity has not recovered from the pandemic.** Pre-COVID ~80M UDAs/yr; 2020 collapsed to 31.4M; recovery has plateaued at ~70M — roughly 12% below pre-pandemic, five years on. This is the strongest headline finding so far, and it doubles as a validity check that the ingest is correct.
+- **The BSA join bridge is measured, not assumed** (input to 3.3). The BSA key is `CONTRACT_NUMBER`, not an ODS code, so there is no free join. But every contract carries a postcode, 98.5% of which exist in ODS, and **6,219 of 7,005 contracts (88.8%) resolve to exactly one ODS practice on postcode alone.** 678 are ambiguous (postcode holds >1 practice). That bounds what 3.3 must solve by name matching to roughly 11% of the estate.
 - **Population reconciles exactly.** England mid-2024 = 58,620,101, matching the published ONS figure; children + adults sums to total; 100% of practice-bearing LSOAs have a population figure.
 - **Compliance is clean.** robots.txt permits these paths, terms carry no anti-scraping clause, content is OGL. Our honest bot User-Agent is accepted — no browser spoofing is used. Required attribution wording is pinned in ADR-002 for the 6.1 pass.
 
@@ -87,9 +90,7 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 
 | Ledger | Item | State |
 |---|---|---|
-| 4.1 | Ingest NHSBSA activity history | **PARKED — spend limit.** Draft at `ingest/bsa.py.wip` (see P5) |
-| 4.3 | Rework freshness to use sitemap `lastmod` for undeclared practices | **New — follows from the correction above** |
-| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **Highest schedule risk — timebox 2 days.** Waiting on 4.1's join-key findings |
+| 3.3 | Entity resolution nhs.uk ↔ ODS ↔ BSA | **NEXT. Highest schedule risk — timebox 2 days.** Starting point measured: 88.8% resolve on postcode alone |
 | 4.2 | Supply-vs-demand / dental-desert model | **Gate DG3.** Must be catchment-based, per the 80.6% finding |
 | 4.3 | Freshness / trust scoring | ✅ Module + tests done; needs the capture to run against real data |
 | 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | Weeks 4–5; needs Node (P4) |
@@ -106,8 +107,6 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | **P2** | **GitHub remote** | No `gh` CLI, no authenticated account. CI cannot run and the nightly cron cannot fire | **The real blocker.** Create an empty GitHub repo and give me the URL with push access, or install + auth `gh`. Until then history accrues only when this machine runs it manually |
 | P1 | NHS Service Search API v3 key | Human must apply on the NHS Digital developer portal; production needs a signed Online Connection Agreement | Not on the critical path — ADR-002 chose a route that does not need it. Worth starting for the timestamp precision it would later add |
 | P3 | Q3 — your viability conditions | Plan assumes solo builder, near-zero budget, public release, no NHS partnership | Confirm or correct. Proceeding on the assumed conditions |
-| **P5** | **Monthly spend limit reached** | Terminated the 4.1 sub-agent mid-run | Raise it at `claude.ai/settings/usage`. All completed work is committed; nothing is lost |
-| P6 | 4.1 draft is incomplete | `ingest/bsa.py.wip` — 753 lines referencing two names it never defines; never ran, no tests | Parked outside the lint/import path so it cannot be mistaken for working code. It **did** identify the right dataset: `english-contractor-monthly-general-dental-activity`, contract-level monthly back to April 2016. Treat the research as a lead, not as verified |
 | P4 | Node.js not installed | Needed for §5 web app | Not urgent — will install when §5 starts |
 
 ---
@@ -125,12 +124,16 @@ The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` pic
 | 5 | `6877cd5` | `ingest/geo.py`, `client.py` POST support, `data/reference/geo/`, tests |
 | — | `ee7f901` | `Documenting the Journey/Session-02_…md` |
 | 6 | `205bfe7` | `ingest/pop.py`, `data/reference/population/`, tests |
+| 7 | `a5589a8` | `analysis/freshness.py`, tests |
+| — | `75e55d8`, `a70a900` | **Night one snapshot**, corrections |
+| 8 | `d9c6c25` | Freshness rework for the 90-day reset |
+| 9 | `6a43387` | `ingest/bsa.py`, `data/reference/bsa/`, tests |
 
 ## Tests or checks run
 
 | Check | Result |
 |---|---|
-| `uv run pytest -q` | **96 passed**, ~6s |
+| `uv run pytest -q` | **148 passed**, ~6s |
 | `uv run ruff check .` | Clean |
 | Live smoke capture (8 practices) | Passed — status + date present in payloads |
 | Live ODS register pull | 9,779 practices in 10 requests |
