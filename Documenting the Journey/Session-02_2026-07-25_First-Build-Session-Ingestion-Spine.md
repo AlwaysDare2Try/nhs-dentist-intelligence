@@ -1,0 +1,116 @@
+# Session 02 — First Build Session: The Ingestion Spine
+
+**Date:** 2026-07-25
+**Preceded by:** `Session-01_2026-07-25_Concept-Ingestion-and-Viability-Analysis.md`
+**Plan of record:** `Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
+**Outcome:** §0 complete, §1 complete, §2 complete, 3.1 and 3.2 complete. Gate **DG1 cleared**. First full-estate capture running.
+
+---
+
+## What this session was
+
+The first session that wrote code. The owner supplied an operating rhythm — *Plan → Implement → Check → Improve*, run as iterative loops with a coordinator/sub-agent split and a live `CLAUDE_PROGRESS.md` — and authorised working without waiting for approval between loops.
+
+Six loops ran. Five ledger phases moved.
+
+| Loop | Ledger | Delivered |
+|---|---|---|
+| 0 | 0.1, 0.2 | Repo, toolchain, CI, ADR-001 |
+| 1a | 1.2, 1.3, 1.4 | Snapshot store, health alarms, nightly workflow |
+| 1b | 1.1 | Polite HTTP client |
+| 2 | 1.1, 2.1, 2.2 | Full-estate fetcher, ADR-002, **Q1 answered** |
+| 3 | 2.3 | Snapshot parser |
+| 4 | 3.1 | ODS register loader |
+| 5 | 3.2 | Geocoding and geography |
+
+---
+
+## The decision that shaped the session
+
+**Build everything around the unknown, so the unknown never blocks.**
+
+The one thing the viability analysis could not confirm (Q1) was whether the source carries acceptance status and a last-updated date. Rather than answering it first and building second, the session dispatched that investigation to a sub-agent and simultaneously built every part of §1 that did not depend on the answer: the storage layer, the health alarms, the schedule, and the HTTP client. All four are route-agnostic by construction.
+
+When the answer arrived — **yes, both are present** — the only thing left to write was the fetcher itself. Roughly 90 minutes of wall-clock investigation cost nothing in delivery time.
+
+This is the same principle as *capture raw, parse later*, applied to the build order rather than the data.
+
+---
+
+## Findings
+
+**Q1: answered YES. Gate DG1 cleared.** nhs.uk carries acceptance status *and* a "Last confirmed" date, at the same cohort granularity the Service Search API v3 offers. Scraping loses nothing material except timestamp precision. Recorded in ADR-002.
+
+**The estate is 6,407 practices, not ~9,000.** The plan's figure was an approximation. 6,407 is the published nhs.uk profile count; 9,779 is ODS *active dental practices*, which includes private-only practices and prison dental units with no public profile. Both numbers are correct and they measure different things — a distinction that would have caused a false alarm later when the crawler "only" returned 6,407.
+
+**Freshness is visible on day one.** The sitemap's `lastmod` values span 2026-07-24 back to **2011-01-06**. Some practices have not confirmed their status in fifteen years. One request yields a freshness distribution for the whole estate — before any history of our own has accrued. Step 4.3 was expected to depend on weeks of accrual; it now has a strong signal immediately.
+
+**Q2, first leg: 99.2%.** 6,358 of 6,407 nhs.uk practices resolve to an active ODS record using nothing but the zero-padding convention (`V01699` → `V001699`). The NHSBSA contract leg — the genuinely hard one, because contracts are many-to-many with sites — remains for step 3.3.
+
+**Geocoding: 99.8%**, clearing the ledger's >99% gate. England 8,714, Wales 363, Isle of Man 14, 19 unmatched.
+
+**Compliance is clean.** robots.txt permits these paths, the terms contain no anti-scraping clause, and content is OGL. Our honest bot User-Agent — naming the project with a contact URL — was tested and accepted, so **no browser spoofing is used anywhere**. That mattered: spoofing would have been easy and would have quietly made the project harder to defend.
+
+---
+
+## Where the plan was wrong, and what changed
+
+Two ledger specifications were implemented differently. Neither reverses an agreed decision, so neither raised an ADR — but both are recorded here rather than left as silent drift.
+
+**1. "Gzipped JSON per practice in dated directories" (step 1.2).**
+Taken literally, ~9,000 files per night is 3.3 million files a year in git. Replaced with a **content-addressed store**: payloads live at `blobs/<sha256>.gz` and each night writes a manifest mapping practice → hash. An unchanged practice costs zero additional bytes, while every night still resolves to a complete, independently parseable view of the estate.
+
+This was validated before committing to it: the same appointments page fetched twice, three seconds apart, is **byte-identical**. Had the pages carried per-request nonces, dedup would have gained nothing and the design would have been wrong. Evidence first, then the design.
+
+**2. "ONSPD quarterly CSV" (step 3.2).**
+Replaced with the postcodes.io bulk API, which serves the same ONS-derived data under OGL and returns everything the plan asked for *plus* ICB and IMD — in 92 requests rather than a ~1 GB quarterly download. Raw responses are stored, so the pipeline reproduces without re-fetching and the CSV route stays open if the service proves unreliable.
+
+A third decision deliberately *refused* a shortcut: step 3.1 does **not** filter the ODS register to England. The list endpoint carries no country field, and guessing from postcode prefixes would misclassify practices along the Welsh border. Country is resolved properly at 3.2 from authoritative data. The geocoding result vindicated this — 363 Welsh and 14 Isle of Man practices sit in the register, exactly the population a prefix heuristic would have mangled.
+
+---
+
+## Dead ends and mistakes
+
+Recorded because the case study is worth more with them than without.
+
+**The test harness that tested nothing.** Five HTTP client tests monkey-patched `__aenter__` on the *instance*. Python resolves dunder methods on the *type*, so the patch never applied and those five tests were silently hitting the live network — passing for the wrong reason, and slowly. Caught only because the suite was suspiciously slow. Fixed by making the transport injectable, which is the better design anyway.
+
+*Lesson: a test that passes slowly deserves the same suspicion as one that fails.*
+
+**A 90-second test suite.** Tests for 503 handling sat through real exponential backoff. Making the backoff scale injectable took the suite from 90s to 6.5s. Left alone, this would have taxed every future loop and eventually discouraged running tests at all.
+
+**A confident conclusion from a zero-byte file.** A byte-stability check compared two downloads and reported "IDENTICAL — dedup will work". Both files were empty: nhs.uk returned 302 and `curl` had not been told to follow redirects. The comparison was true and worthless. Re-run with `-L`, it gave the same conclusion for a real reason.
+
+*Lesson: verify the measurement produced data before trusting what it says about the data.*
+
+**A misread of the data as a bug in the data.** A first pass at the captured payloads showed four of eight practices with "NO MARKER" and all eight dated identically — read initially as a capture problem. Both were artefacts of the checking script: the regex omitted the "does not currently accept" wording, and the uniform date was correct, because the sitemap is ordered newest-first and the first eight entries genuinely all confirmed on the same day. The data was right; the question was wrong.
+
+**A stall that was not a stall.** Capture progress was briefly diagnosed as too slow. Measured properly over 60 seconds it was 0.97 req/s against a 1.0 target. The error was mental arithmetic about elapsed time, not the crawler.
+
+**A trap that was caught in time.** Every appointments page in England carries an urgent-care bullet list ("an urgent appointment at short notice"). A cohort parser reading list items document-wide would have marked the entire estate as accepting patients — a plausible-looking, completely wrong national dataset. Scoping extraction to the routine-care region prevented it, and a test now pins that behaviour.
+
+---
+
+## Notes on the AI-assisted method (objective O5)
+
+**Sub-agent economics are not obvious.** Two sub-agents ran this session. The first — investigating the fetch route — consumed ~134,000 tokens producing a report of a few thousand. That was excellent value: the work was dozens of exploratory HTTP calls whose raw output would have flooded the coordinator's context and displaced everything else.
+
+A third delegation was considered and **rejected**: building the ODS loader. That task was mostly writing code from a specification already in hand, which is cheap in the coordinator's context and would have cost far more in a fresh agent that had to rediscover the context first. Delegation pays when the work is *noisy* — high input, low output — not merely when it is separable.
+
+**Specifying the boundary matters more than specifying the task.** The productive sub-agent prompts named the files not to touch, the setup steps that are non-obvious (`uv` is not on the default PATH), the concurrent crawl not to disturb, and demanded an explicit "what I tested vs what I assumed" section. That last section is where the real value sits: the first agent's honest admission that it never verified a bare `curl` User-Agent led directly to testing our own, which is why the project does not spoof a browser.
+
+**The plan held.** Nothing in this session required re-litigating Session 01. The ledger was consulted, followed, and deviated from only twice — both times with the deviation recorded and the original route left open. Having the agreed ground written down meant build decisions were about *implementation*, never about *direction*.
+
+---
+
+## State at end of session
+
+**78 tests green, lint clean, suite runs in ~6 seconds.** Seven commits.
+
+A full-estate capture of all 6,407 practices is running at ~1 req/s with zero failures — the first night of a record that exists nowhere else.
+
+**The one thing that still needs a human:** the repository has no GitHub remote. Until it does, the nightly cron cannot fire, and unattended accrual — the entire differentiating asset — does not start. Local captures work, but they depend on someone remembering.
+
+---
+
+*Session 02 · 2026-07-25 · NHS Dentist Intelligence Platform*
