@@ -37,13 +37,13 @@ All of §1–§4 is now complete. **Next: §5 — the public surface** (static b
 
 **By cohort — the number that matters for product framing:** adults 18+ accepted at only **27.8%** of practices, free-care adults 29.0%, children 39.5%. A headline "39.7% accepting" would mislead. This confirms decision D2 with our own data: leading with an "accepting" filter still returns mostly nothing.
 
-Progress is checkable at any time:
+**Checking capture progress.** Counting blobs only works for the *first* night. From night two on, pages are byte-identical so almost no new blobs are written — night two added 1 blob against night one's 6,408. Watch the run log instead, or check the day's `run.json` once it completes:
 
 ```bash
-find data/snapshots/blobs -name '*.gz' | wc -l    # out of 6,407
+tail -3 data/snapshots/$(date -u +%F)/run.json   # after completion
 ```
 
-The run is resumable. If it dies, re-running `uv run python ingest/fetch.py` picks up where it stopped rather than re-fetching.
+Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it stopped rather than re-fetching, and a completed day refuses to be overwritten.
 
 ---
 
