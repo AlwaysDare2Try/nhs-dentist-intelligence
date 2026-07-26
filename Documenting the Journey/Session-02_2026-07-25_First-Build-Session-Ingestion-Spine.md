@@ -138,6 +138,23 @@ This vindicates the repositioning decision (D2) with our own data. A headline "3
 
 The NHSBSA activity ingest (4.1) was delegated to a sub-agent that **terminated when the account hit its monthly spend limit**. It had identified the correct dataset — `english-contractor-monthly-general-dental-activity`, contract-level and monthly back to April 2016 — and written 753 lines that reference two names it never defined. The draft is parked at `ingest/bsa.py.wip`, deliberately outside the lint and import path so it cannot be mistaken for working code. Its research is preserved; its claims are not trusted.
 
+## Night two — the record proves itself in 24 hours
+
+The second capture ran on 2026-07-26: 6,408 records, zero failures, and **0.1 MB new against 43.0 MB deduplicated**. The whole store is still 51 MB. A second complete night of England cost about a hundred kilobytes, which settles any doubt about the content-addressed deviation at step 1.2.
+
+Two practices changed status overnight — the first entries in a record that exists nowhere else:
+
+| Practice | Night 1 (25 Jul) | Night 2 (26 Jul) | Last confirmed |
+|---|---|---|---|
+| V027041 | not accepting | **not confirmed** | 2026-04-27 → gone |
+| V016511 | **accepting** | **not confirmed** | 2026-04-27 → gone |
+
+Both had declared on 2026-04-27. On night one that was **89 days** old and still displayed. On night two it was **exactly 90 days** old and had been wiped.
+
+This is the 90-day reset caught in the act. Night one could only infer the mechanism from a cross-section — no practice with a pre-2026 `lastmod` had any declared status. Night two watched it happen to two named practices on precisely day 90, which is why night one's oldest observed confirmation was 89 days rather than 90. The rule is not "roughly 90 days"; the declaration is dropped the moment it reaches 90.
+
+The second row is the one that matters for the product. Yesterday V016511 told the public it was accepting new NHS patients. Today it tells them nothing. **nhs.uk keeps no record that the claim was ever made**, and a patient who saw it yesterday has no way to demonstrate it. That gap is the entire reason this project exists, and it took 24 hours of accrual to produce a concrete example of it.
+
 ## State at end of session
 
 **122 tests green, lint clean, suite runs in ~6 seconds.** Sixteen commits.
