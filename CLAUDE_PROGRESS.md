@@ -123,21 +123,21 @@ Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it
 
 | Loop | Commit | Files |
 |---|---|---|
-| 0 | `6409125` | `pyproject.toml`, `.gitignore`, `ci.yml`, `ADR-001`, `README`, `LICENSE` |
-| 1a | `e2c7a07` | `ingest/snapshot.py`, `ingest/health.py`, `snapshot.yml`, tests |
-| 1b | `01a329e` | `ingest/client.py`, tests |
-| 2 | `95e7b0a` | `ingest/fetch.py`, `docs/ADR-002-availability-route.md`, tests |
-| 3 | `0dd702d` | `ingest/parse.py`, tests |
-| 4 | `da148db` | `ingest/ods.py`, `data/reference/ods/`, tests |
-| 5 | `6877cd5` | `ingest/geo.py`, `client.py` POST support, `data/reference/geo/`, tests |
-| — | `ee7f901` | `Documenting the Journey/Session-02_…md` |
-| 6 | `205bfe7` | `ingest/pop.py`, `data/reference/population/`, tests |
-| 7 | `a5589a8` | `analysis/freshness.py`, tests |
-| — | `75e55d8`, `a70a900` | **Night one snapshot**, corrections |
-| 8 | `d9c6c25` | Freshness rework for the 90-day reset |
-| 9 | `6a43387` | `ingest/bsa.py`, `data/reference/bsa/`, tests |
-| 10 | `2ac6698` | `ingest/match.py`, tests |
-| 11 | `409653e` | `analysis/desert.py`, `ingest/lsoa.py`, `data/reference/lsoa/`, tests |
+| 0 | `c697c19` | `pyproject.toml`, `.gitignore`, `ci.yml`, `ADR-001`, `README`, `LICENSE` |
+| 1a | `fadf79a` | `ingest/snapshot.py`, `ingest/health.py`, `snapshot.yml`, tests |
+| 1b | `cb1ece4` | `ingest/client.py`, tests |
+| 2 | `acf18bd` | `ingest/fetch.py`, `docs/ADR-002-availability-route.md`, tests |
+| 3 | `3b87621` | `ingest/parse.py`, tests |
+| 4 | `23b8cbe` | `ingest/ods.py`, `data/reference/ods/`, tests |
+| 5 | `3825b1a` | `ingest/geo.py`, `client.py` POST support, `data/reference/geo/`, tests |
+| — | `cc9e4cd` | `Documenting the Journey/Session-02_…md` |
+| 6 | `f5cef08` | `ingest/pop.py`, `data/reference/population/`, tests |
+| 7 | `bd7892a` | `analysis/freshness.py`, tests |
+| — | `e3ce17b`, `3fc0c5e` | **Night one snapshot**, corrections |
+| 8 | `ff329e3` | Freshness rework for the 90-day reset |
+| 9 | `9137c5e` | `ingest/bsa.py`, `data/reference/bsa/`, tests |
+| 10 | `55e82e9` | `ingest/match.py`, tests |
+| 11 | `aa4adbf` | `analysis/desert.py`, `ingest/lsoa.py`, `data/reference/lsoa/`, tests |
 
 ## Tests or checks run
 
