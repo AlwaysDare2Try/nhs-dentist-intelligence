@@ -34,7 +34,7 @@ DEFAULT_MAX_ATTEMPTS = 4
 
 USER_AGENT = (
     "NHSDentistIntelligence/0.1 (open data research; England dental access; "
-    "+https://github.com/dare2try/nhs-dentist-intelligence)"
+    "+https://github.com/AlwaysDare2Try/nhs-dentist-intelligence)"
 )
 
 RETRYABLE_STATUS = {408, 425, 429, 500, 502, 503, 504}
