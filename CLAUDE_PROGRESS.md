@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-25 — end of Loop 11
+**Last updated:** 2026-07-28 — end of Loop 12
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -18,7 +18,13 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 ## Current loop
 
-**Loops 0–11 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
+**Loops 0–12 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
+
+### ⚠️ A night of history has been lost
+
+**2026-07-27 was never captured and cannot be recovered.** Captures held: 25, 26, 28 July — 3 of a possible 4. The cause is step 1.3: the nightly workflow is correct but has no remote to run on, so a capture only happens when I am asked.
+
+The cost is now measurable: **10 of the 12 observed status changes cannot be dated to a single day**, because they were seen across the gap. Three practices opened to new NHS patients in that window and one closed; we cannot say when. `meta.json` publishes this rather than hiding it.
 
 ### What is being worked on next
 
@@ -69,8 +75,9 @@ Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it
 | 4.1 | NHSBSA activity history | `ingest/bsa.py` | 847,405 contract-months, 120 months, 9,891 contracts |
 | 3.3 | **Entity resolution** | `ingest/match.py` | **91.4%** matched; 495 queued for review |
 | 4.2 | **Dental-desert model** | `analysis/desert.py` + `ingest/lsoa.py` | **Gate DG3 cleared.** 2SFCA over 33,755 LSOAs |
+| 5.1 | **Static data build** | `analysis/build.py` | Schema v1; all of England in **224 KB gzipped** |
 
-**186 tests green, lint clean.** Suite runs in ~7s.
+**198 tests green, lint clean.** Suite runs in ~7s.
 
 ### Key findings so far
 
@@ -94,7 +101,7 @@ Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it
 
 | Ledger | Item | State |
 |---|---|---|
-| 5.1–5.5 | Static build, postcode search, map, profile pages, downloads | **NEXT.** Needs Node (P4) |
+| 5.2–5.5 | Postcode search, map, profile pages, downloads | **NEXT — blocked on Node (P4)** |
 | 6.1–6.3 | Compliance pass, deploy, tell three people | **Gates DG5 / DG4** |
 | 7.1 | Session journal | Continuous — Session 02 written; **needs updating for loops 8–11** |
 | 7.2 | Data-quality dashboard | From week 3 |
