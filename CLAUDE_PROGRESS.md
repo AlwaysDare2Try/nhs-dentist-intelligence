@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-28 — end of Loop 12
+**Last updated:** 2026-07-29 — repository published, automation live
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -20,11 +20,17 @@ Build the public longitudinal record of NHS dental provision in England: nightly
 
 **Loops 0–12 complete.** The spend limit that halted Loop 7 has been reset; work resumed and 4.1 is now done properly.
 
-### ⚠️ A night of history has been lost
+### ✅ Published — automation is live
 
-**2026-07-27 was never captured and cannot be recovered.** Captures held: 25, 26, 28 July — 3 of a possible 4. The cause is step 1.3: the nightly workflow is correct but has no remote to run on, so a capture only happens when I am asked.
+The repository is on GitHub at **AlwaysDare2Try/nhs-dentist-intelligence** (public). CI passes there. The nightly workflow is registered, active, and **runs on GitHub's runners** — capture no longer depends on this machine or on anyone remembering to run it.
 
-The cost is now measurable: **10 of the 12 observed status changes cannot be dated to a single day**, because they were seen across the gap. Three practices opened to new NHS patients in that window and one closed; we cannot say when. `meta.json` publishes this rather than hiding it.
+Getting there required working around a network fault on this machine: uploads above ~64 KB to GitHub fail. Fully documented in `docs/ADR-003-publishing-under-a-broken-upload-path.md`.
+
+### ⚠️ Four nights exist in only one place
+
+Captures for **2026-07-25, 26, 28 and 29** could not be uploaded (individual objects far exceed the 64 KB ceiling). They are preserved at `~/nhs-dentist-data-backup-2026-07-29/` and in the local branch `local-full-history-with-data`. **They are irreplaceable and not redundantly stored.** Push them once the upload path is fixed.
+
+**2026-07-27 remains permanently lost** — never captured.
 
 ### What is being worked on next
 
