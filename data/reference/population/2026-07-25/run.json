@@ -1,0 +1,14 @@
+{
+  "aborted": false,
+  "bytes_deduped": 0,
+  "bytes_new": 665316,
+  "complete": true,
+  "day": "2026-07-25",
+  "duration_seconds": 15.8,
+  "error_sample": [],
+  "finished_at": "2026-07-25T17:28:02.024826+00:00",
+  "records_failed": 0,
+  "records_ok": 5,
+  "route": "nomis-nm2014",
+  "started_at": "2026-07-25T17:27:46.219898+00:00"
+}

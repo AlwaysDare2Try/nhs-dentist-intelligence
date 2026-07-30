@@ -1,0 +1,14 @@
+{
+  "aborted": false,
+  "bytes_deduped": 0,
+  "bytes_new": 1115192,
+  "complete": true,
+  "day": "2026-07-25",
+  "duration_seconds": 30.4,
+  "error_sample": [],
+  "finished_at": "2026-07-25T17:20:24.075732+00:00",
+  "records_failed": 0,
+  "records_ok": 92,
+  "route": "postcodes-io",
+  "started_at": "2026-07-25T17:19:53.712582+00:00"
+}

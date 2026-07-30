@@ -1,0 +1,14 @@
+{
+  "aborted": false,
+  "bytes_deduped": 0,
+  "bytes_new": 228318,
+  "complete": true,
+  "day": "2026-07-25",
+  "duration_seconds": 32.6,
+  "error_sample": [],
+  "finished_at": "2026-07-25T17:17:11.203340+00:00",
+  "records_failed": 0,
+  "records_ok": 10,
+  "route": "ods-ord",
+  "started_at": "2026-07-25T17:16:38.578902+00:00"
+}

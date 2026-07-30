@@ -1,0 +1,14 @@
+{
+  "aborted": false,
+  "bytes_deduped": 0,
+  "bytes_new": 878921,
+  "complete": true,
+  "day": "2026-07-25",
+  "duration_seconds": 9.6,
+  "error_sample": [],
+  "finished_at": "2026-07-25T22:30:46.431299+00:00",
+  "records_failed": 0,
+  "records_ok": 18,
+  "route": "ons-arcgis",
+  "started_at": "2026-07-25T22:30:36.791335+00:00"
+}
