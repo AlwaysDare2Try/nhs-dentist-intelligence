@@ -82,6 +82,7 @@ Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it
 | 3.3 | **Entity resolution** | `ingest/match.py` | **91.4%** matched; 495 queued for review |
 | 4.2 | **Dental-desert model** | `analysis/desert.py` + `ingest/lsoa.py` | **Gate DG3 cleared.** 2SFCA over 33,755 LSOAs |
 | 5.1 | **Static data build** | `analysis/build.py` | Schema v1; all of England in **224 KB gzipped** |
+| 5.2 | **Postcode search** | `web/` (Next.js static export) | 25 nearest ranked; C1 enforced by test |
 
 **198 tests green, lint clean.** Suite runs in ~7s.
 

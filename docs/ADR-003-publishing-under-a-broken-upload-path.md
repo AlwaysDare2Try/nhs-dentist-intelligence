@@ -77,11 +77,16 @@ Their analytical content is not lost: the parsed findings, the 90-day reset disc
 
 **Accepted risk.** GitHub's history will begin from the first Actions run, so there is a discontinuity between local captures and published ones. When the upload path is fixed, the four nights can be merged in — the store is content-addressed and append-only, so a later merge is well-defined rather than a reconciliation problem.
 
-## Outstanding: the fix is not yet persistent
+## Persistence — installed 2026-08-01
 
-`ifconfig` flags and these sysctls **reset on reboot**. Until persistence is installed, a restart silently reinstates the corruption.
+The fix now survives reboots:
 
-Two pieces are needed — a boot-time `sysctl` and a `LaunchDaemon` to reapply the interface flag (`sysctl.conf` cannot set `ifconfig` options). Installing a system daemon was deliberately not automated here; it is a persistent root-level change and belongs to the machine's owner.
+- **`/etc/sysctl.conf`** — `net.inet.tcp.tso=0` and `net.link.generic.system.hwcksum_tx=0`, applied at boot.
+- **`/Library/LaunchDaemons/local.disable-tso.plist`** — reapplies `ifconfig <if> -tso` across every hardware interface at boot, because `sysctl.conf` cannot set interface options. Logs to `/var/log/disable-tso.log`.
+
+**Verified rather than assumed:** the setting was forced back on, the daemon kickstarted, and the revert observed; a 32 MB push then succeeded. Note the Wi-Fi driver would not re-enable TSO via `ifconfig` once the global sysctl was zero — the sysctl is the effective control, and the daemon covers the interface flag for completeness.
+
+To undo: delete both files and reboot, or `sudo sysctl -w net.inet.tcp.tso=1`.
 
 Also worth noting: this fault silently corrupted **any** large upload from this machine, not just git — backups, cloud sync and file transfers were all affected for as long as it was present.
 
