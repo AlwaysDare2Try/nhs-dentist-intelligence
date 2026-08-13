@@ -1,0 +1,14 @@
+{
+  "aborted": false,
+  "bytes_deduped": 42327063,
+  "bytes_new": 825391,
+  "complete": true,
+  "day": "2026-08-13",
+  "duration_seconds": 7011.6,
+  "error_sample": [],
+  "finished_at": "2026-08-13T10:01:08.843062+00:00",
+  "records_failed": 0,
+  "records_ok": 6413,
+  "route": "nhsuk-html",
+  "started_at": "2026-08-13T08:04:17.282504+00:00"
+}
