@@ -1,0 +1,57 @@
+{
+  "aborted": false,
+  "bytes_deduped": 42459615,
+  "bytes_new": 638885,
+  "complete": true,
+  "day": "2026-08-15",
+  "duration_seconds": 7002.4,
+  "error_sample": [
+    {
+      "error": "HTTP 404",
+      "practice_id": "V010381",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V010381"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V008766",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V008766"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V008744",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V008744"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V008742",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V008742"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V008694",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V008694"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V016988",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care-services/V016988"
+    },
+    {
+      "error": "HTTP 404",
+      "practice_id": "V008692",
+      "status": 404,
+      "url": "https://www.nhs.uk/services/dentist/north-yorkshire-dental-care/V008692"
+    }
+  ],
+  "finished_at": "2026-08-15T06:12:21.691072+00:00",
+  "records_failed": 7,
+  "records_ok": 6406,
+  "route": "nhsuk-html",
+  "started_at": "2026-08-15T04:15:39.318601+00:00"
+}
