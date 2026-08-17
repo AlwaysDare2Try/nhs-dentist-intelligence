@@ -2,7 +2,7 @@
 
 **Project:** NHS Dentist Intelligence Platform (England)
 **Plan of record:** `Documenting the Journey/Build-Plan-v1_2026-07-25_Delivery-Ledger-and-North-Star.md`
-**Last updated:** 2026-07-29 — repository published, automation live
+**Last updated:** 2026-08-17 — stale-status audit: the four at-risk nights are confirmed published, P2 and P4 closed
 
 > Read this file first on any resume. It is the single source of truth for where the build stands.
 
@@ -26,15 +26,17 @@ The repository is on GitHub at **AlwaysDare2Try/nhs-dentist-intelligence** (publ
 
 Getting there required working around a network fault on this machine: uploads above ~64 KB to GitHub fail. Fully documented in `docs/ADR-003-publishing-under-a-broken-upload-path.md`.
 
-### ⚠️ Four nights exist in only one place
+### ✅ The four at-risk nights are published — risk closed
 
-Captures for **2026-07-25, 26, 28 and 29** could not be uploaded (individual objects far exceed the 64 KB ceiling). They are preserved at `~/nhs-dentist-data-backup-2026-07-29/` and in the local branch `local-full-history-with-data`. **They are irreplaceable and not redundantly stored.** Push them once the upload path is fixed.
+Captures for **2026-07-25, 26, 28 and 29** could not originally be uploaded (individual objects far exceed the 64 KB ceiling that the local network fault imposed). **That is resolved.** Once TSO was disabled they were pushed in full, and all four now sit on the public remote alongside the runner-produced captures. Verified 2026-08-17: every one of the **6,486** content blobs those four manifests reference is present on `origin/main`, none missing, and all four `run.json` files report `complete=true, aborted=false`. `docs/ADR-003` records the same closure as of 2026-07-30.
 
-**2026-07-27 remains permanently lost** — never captured.
+The local copies — `~/nhs-dentist-data-backup-2026-07-29/` and the branch `local-full-history-with-data` — are therefore **redundant backups, not the only copy**. They are safe to delete once the unrelated `Starting Docs/` pair on that branch has a private home (see below).
+
+**2026-07-27 remains permanently lost** — never captured. That is the one real gap in the series.
 
 ### What is being worked on next
 
-All of §1–§4 is now complete. **Next: §5 — the public surface** (static build, postcode search, map, profile pages, downloads). That needs Node.js installed (P4). Also outstanding: 7.2, the data-quality dashboard.
+All of §1–§4 is now complete. **Next: §5 — the public surface** (static build, postcode search, map, profile pages, downloads). Node.js is now installed (v22.20.0) and a static export has been produced locally into `web/out/`, but **it is not deployed anywhere** — no `vercel.json`, no `.vercel/`. Deploying that surface is the outstanding work, not building it from scratch. Also outstanding: 7.2, the data-quality dashboard.
 
 ### Night one is captured, parsed and committed
 
@@ -119,10 +121,10 @@ Runs are resumable: re-running `uv run python ingest/fetch.py` picks up where it
 
 | # | Item | Why blocked | What I need |
 |---|---|---|---|
-| **P2** | **GitHub remote** | No `gh` CLI, no authenticated account. CI cannot run and the nightly cron cannot fire | **The real blocker.** Create an empty GitHub repo and give me the URL with push access, or install + auth `gh`. Until then history accrues only when this machine runs it manually |
+| ~~P2~~ | ~~GitHub remote~~ | **Resolved 2026-07-29.** The repo is live at `AlwaysDare2Try/nhs-dentist-intelligence` (public), `gh` is authenticated, CI passes and `snapshot.yml` has captured every night on GitHub's runners since. Nothing here depends on this machine any more | Nothing — kept only so the history of this file reads correctly |
 | P1 | NHS Service Search API v3 key | Human must apply on the NHS Digital developer portal; production needs a signed Online Connection Agreement | Not on the critical path — ADR-002 chose a route that does not need it. Worth starting for the timestamp precision it would later add |
 | P3 | Q3 — your viability conditions | Plan assumes solo builder, near-zero budget, public release, no NHS partnership | Confirm or correct. Proceeding on the assumed conditions |
-| P4 | Node.js not installed | Needed for §5 web app | Not urgent — will install when §5 starts |
+| ~~P4~~ | ~~Node.js not installed~~ | **Resolved.** Node v22.20.0 / npm 10.9.3 are installed and the `web/` static export builds | Nothing |
 
 ---
 
