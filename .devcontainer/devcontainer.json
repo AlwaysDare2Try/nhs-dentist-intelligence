@@ -1,0 +1,9 @@
+{
+  "name": "NHS Dentist Intelligence",
+  "image": "mcr.microsoft.com/devcontainers/python:3.12",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" }
+  },
+  "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh && $HOME/.local/bin/uv sync --all-extras",
+  "remoteEnv": { "PATH": "${containerEnv:PATH}:/home/vscode/.local/bin" }
+}

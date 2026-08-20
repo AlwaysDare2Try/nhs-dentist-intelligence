@@ -31,11 +31,34 @@ docs/      architecture decision records
 
 ## Development
 
+### Fresh clone → running
+
+Requires Python 3.12 (see `.python-version`) and [`uv`](https://docs.astral.sh/uv/).
+
 ```bash
+git clone https://github.com/learndca/nhs-dentist-intelligence.git
+cd nhs-dentist-intelligence
 uv sync --all-extras
 uv run ruff check .
 uv run pytest -q
 ```
+
+To run a capture yourself (writes into `data/snapshots/`, ~2 hours for the
+full estate, no credentials needed):
+
+```bash
+uv run python ingest/fetch.py --route auto
+uv run python ingest/health.py
+```
+
+The front end is a separate Next.js app:
+
+```bash
+cd web && npm install && npm run dev
+```
+
+[`AGENTS.md`](AGENTS.md) is the canonical brief for this repository — the
+architecture, the nightly snapshot contract and what not to change.
 
 ## Data sources and licensing
 
